@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #f4eee6;
+  --cream-2: #ebe2d4;
+  --ink: #1c1714;
+  --ink-soft: #5c534c;
+  --gold: #b08d57;
+  --gold-deep: #8f6e3e;
+  --rose: #c9a9a3;
+  --paper: #fffcf8;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-cream-2: var(--cream-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
+  --color-rose: var(--rose);
+  --color-paper: var(--paper);
+  --font-sans: var(--font-dm-sans);
+  --font-serif: var(--font-cormorant);
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--gold) 35%, white);
+}
