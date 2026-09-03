@@ -2,6 +2,7 @@ import { PullToRefresh } from "@/components/app/pull-to-refresh";
 import { MeineTermine } from "@/components/bookings/meine-termine";
 import { SalonShell } from "@/components/business/salon-shell";
 import { SalonAnalyticsBoard } from "@/components/business/analytics-board";
+import { SalonOfferList } from "@/components/business/salon-offer-list";
 import { RatingWindow } from "@/components/ratings/rating-window";
 import { StarAverage } from "@/components/ratings/star-average";
 import { requireBusiness } from "@/lib/auth/require-business";
@@ -10,7 +11,10 @@ import { loadSalonAnalytics } from "@/lib/business/analytics";
 import { loadSalonQuickActions } from "@/lib/business/quick-actions";
 import { resolveLogoUrl } from "@/lib/business/images";
 import { loadSalonAppointments } from "@/lib/bookings/overview";
+import { loadSalonOffers } from "@/lib/offers/salon-list";
+import { loadUrgentMatchQuota } from "@/lib/offers/urgent-quota";
 import { loadPendingRatingsForUser, loadSalonAverages } from "@/lib/ratings/store";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +27,7 @@ export default async function BusinessDashboardPage({
   const { user, business } = await requireBusiness();
   const salonName = business?.business_name || "Dein Salon";
 
-  const [appointments, pendingRatings, averages, analytics] = await Promise.all([
+  const [appointments, pendingRatings, averages, analytics, offers, urgentQuota] = await Promise.all([
     business ? loadSalonAppointments(business.id) : Promise.resolve([]),
     loadPendingRatingsForUser({ userId: user.id, role: "business" }),
     loadSalonAverages([user.id]),
@@ -36,6 +40,10 @@ export default async function BusinessDashboardPage({
           booked_slots: 0,
           total_slots: 0,
         }),
+    business ? loadSalonOffers(business.id) : Promise.resolve([]),
+    business
+      ? loadUrgentMatchQuota(createAdminClient(), business.id)
+      : Promise.resolve({ reached: false, used: 0, limit: 3, remaining: 3 }),
   ]);
 
   const quickActions = business
@@ -74,6 +82,22 @@ export default async function BusinessDashboardPage({
       ) : null}
 
       <SalonQuickActionsHub stats={quickActions} />
+      <section className="mb-12">
+        <h2 className="font-serif text-3xl text-ink">Deine Angebote</h2>
+        <p className="mt-2 text-sm text-ink-soft">
+          Tippe auf den Stift, um Titel, Preise, Bild oder neue Slots zu ändern.
+        </p>
+        <div className="mt-6">
+        <SalonOfferList
+          offers={offers}
+          currentUserId={business?.id ?? ""}
+            urgentLimitReached={urgentQuota.reached}
+            urgentLimit={urgentQuota.limit}
+            urgentUsed={urgentQuota.used}
+            empty="Noch kein Angebot. Unter Angebot kannst du den ersten Deal veröffentlichen."
+          />
+        </div>
+      </section>
       <SalonAnalyticsBoard stats={analytics} />
       <RatingWindow items={pendingRatings} role="business" />
       <MeineTermine items={appointments} role="salon" currentUserId={user.id} />

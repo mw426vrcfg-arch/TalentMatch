@@ -103,6 +103,24 @@ create policy offers_insert_own
     )
   );
 
+drop policy if exists "offers_update_policy" on public.offers;
+drop policy if exists offers_update_policy on public.offers;
+create policy "offers_update_policy"
+  on public.offers for update
+  to authenticated
+  using (
+    business_id = auth.uid()
+    or business_id in (
+      select id from public.business_profiles where user_id = auth.uid()
+    )
+  )
+  with check (
+    business_id = auth.uid()
+    or business_id in (
+      select id from public.business_profiles where user_id = auth.uid()
+    )
+  );
+
 drop policy if exists offer_slots_select_own on public.offer_slots;
 create policy offer_slots_select_own
   on public.offer_slots for select

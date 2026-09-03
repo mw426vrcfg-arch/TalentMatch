@@ -30,6 +30,15 @@ export function formatSlotDay(iso: string) {
   }).format(new Date(iso));
 }
 
+export function formatSlotClock(iso: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Zurich",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso));
+}
+
 export function slotDayKey(iso: string) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Zurich",

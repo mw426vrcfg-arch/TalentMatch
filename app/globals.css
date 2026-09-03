@@ -56,6 +56,46 @@
   }
 }
 
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(22px) scale(0.98);
+  }
+}
+
 @keyframes urgent-pulse {
   0%,
   100% {
@@ -291,5 +331,21 @@ a.ui-icon-btn:active {
 
   .ui-tabbar {
     @apply fixed right-0 bottom-0 left-0 z-40 border-t border-neutral-200/60 bg-white/70 shadow-[0_-4px_30px_rgba(0,0,0,0.02)] backdrop-blur-xl;
+  }
+
+  .ui-overlay {
+    animation: overlay-in 0.35s ease-out both;
+  }
+
+  .ui-overlay-out {
+    animation: overlay-out 0.22s ease-in both;
+  }
+
+  .ui-sheet {
+    animation: sheet-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .ui-sheet-out {
+    animation: sheet-out 0.22s ease-in both;
   }
 }
