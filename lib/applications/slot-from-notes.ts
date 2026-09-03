@@ -35,3 +35,17 @@ export function notesForDisplay(notes: string | null) {
     .replace(/\n*\[slot:[0-9a-f-]+\]/gi, "")
     .trim();
 }
+
+export function parseSlotStartFromNotes(notes: string | null | undefined) {
+  if (!notes) {
+    return null;
+  }
+
+  const match = notes.match(/Gewünschter Slot:\s*(\S+)/i);
+  const value = match?.[1]?.trim();
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}

@@ -38,6 +38,7 @@ create table public.users (
   role public.user_role not null default 'customer',
   full_name text not null default '',
   phone text,
+  account_status text not null default 'aktiv',
   created_at timestamptz not null default now()
 );
 
@@ -82,6 +83,8 @@ create table public.offers (
   duration_minutes integer not null,
   requirements text,
   status public.offer_status not null default 'active',
+  is_urgent boolean not null default false,
+  image_url text,
   created_at timestamptz not null default now(),
   constraint offers_prices_non_negative check (
     normal_price >= 0
@@ -92,6 +95,7 @@ create table public.offers (
 
 create index offers_business_id_idx on public.offers (business_id);
 create index offers_status_idx on public.offers (status);
+create index offers_is_urgent_idx on public.offers (is_urgent) where is_urgent = true;
 create index offers_service_type_idx on public.offers (service_type);
 
 -- -----------------------------------------------------------------------------
@@ -168,12 +172,30 @@ create table public.strikes (
   customer_id uuid not null references public.users (id) on delete cascade,
   reason text not null,
   active boolean not null default true,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  expired_at timestamptz
 );
 
 create index strikes_customer_id_idx on public.strikes (customer_id);
 create index strikes_active_idx on public.strikes (customer_id)
   where active = true;
+
+create table public.ratings (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid not null references public.bookings (id) on delete cascade,
+  from_user_id uuid not null references public.users (id) on delete cascade,
+  reviewee_id uuid not null references public.users (id) on delete cascade,
+  rating integer not null,
+  comment text,
+  created_at timestamptz not null default now(),
+  constraint ratings_rating_range check (rating >= 1 and rating <= 5),
+  constraint ratings_one_per_from_user unique (booking_id, from_user_id),
+  constraint ratings_not_self check (from_user_id <> reviewee_id)
+);
+
+create index ratings_booking_id_idx on public.ratings (booking_id);
+create index ratings_from_user_id_idx on public.ratings (from_user_id);
+create index ratings_reviewee_id_idx on public.ratings (reviewee_id);
 
 -- -----------------------------------------------------------------------------
 -- 7.8 reviews
@@ -206,7 +228,7 @@ create table public.notifications (
   message text not null,
   application_id uuid references public.applications (id) on delete set null,
   offer_id uuid references public.offers (id) on delete set null,
-  read_at timestamptz,
+  is_read boolean not null default false,
   created_at timestamptz not null default now(),
   constraint notifications_type_check check (
     type in (
@@ -223,7 +245,7 @@ create index notifications_user_id_idx
 
 create index notifications_unread_idx
   on public.notifications (user_id)
-  where read_at is null;
+  where is_read = false;
 
 
 -- -----------------------------------------------------------------------------
@@ -295,6 +317,7 @@ alter table public.applications enable row level security;
 alter table public.bookings enable row level security;
 alter table public.strikes enable row level security;
 alter table public.reviews enable row level security;
+alter table public.ratings enable row level security;
 
 drop policy if exists users_select_own on public.users;
 create policy users_select_own

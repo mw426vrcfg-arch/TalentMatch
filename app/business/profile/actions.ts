@@ -6,17 +6,28 @@ import { requireBusiness } from "@/lib/auth/require-business";
 import {
   isImageFile,
   MAX_LOGO_BYTES,
+  resolveLogoUrl,
   uploadSalonLogo,
 } from "@/lib/business/images";
-import { saveBusinessProfile } from "@/lib/business/profile-store";
+import { loadBusinessProfileByUserId, saveBusinessProfile } from "@/lib/business/profile-store";
+import { readLine, readText, sanitizePhone, TEXT_LIMITS } from "@/lib/security/sanitize";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ProfileFormState = {
   error?: string;
 };
 
-function readString(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
+export async function loadMyBusinessProfileAction() {
+  const { user } = await requireBusiness();
+  const admin = createAdminClient();
+  const { profile } = await loadBusinessProfileByUserId(admin, user.id);
+  if (!profile) {
+    return null;
+  }
+  return {
+    ...profile,
+    logo_url: resolveLogoUrl(profile.logo_url),
+  };
 }
 
 export async function updateBusinessProfileAction(
@@ -25,11 +36,13 @@ export async function updateBusinessProfileAction(
 ): Promise<ProfileFormState> {
   const { user, business } = await requireBusiness();
 
-  const businessName = readString(formData, "business_name");
-  const location = readString(formData, "location");
-  const address = readString(formData, "address");
-  const phone = readString(formData, "phone");
-  const description = readString(formData, "description");
+  const businessName = readLine(formData, "business_name", TEXT_LIMITS.name);
+  const location = readLine(formData, "location", TEXT_LIMITS.location);
+  const address =
+    readLine(formData, "address", TEXT_LIMITS.address) ||
+    readLine(formData, "street", TEXT_LIMITS.address);
+  const phone = sanitizePhone(formData.get("phone"));
+  const description = readText(formData, "description", TEXT_LIMITS.description);
   const logo = formData.get("logo");
 
   if (!businessName || !location) {
@@ -94,6 +107,19 @@ export async function updateBusinessProfileAction(
       phone: phone || null,
       logo_url: logoUrl,
     });
+
+    if (logoUrl) {
+      const targetId = profileId ?? user.id;
+      for (const column of ["logo_url", "profile_picture_url"] as const) {
+        const { error: logoError } = await admin
+          .from("business_profiles")
+          .update({ [column]: logoUrl })
+          .eq("id", targetId);
+        if (logoError && !/could not find the '|schema cache/i.test(logoError.message)) {
+          throw new Error(logoError.message);
+        }
+      }
+    }
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Profil konnte nicht gespeichert werden.",

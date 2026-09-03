@@ -1,60 +1,53 @@
 import Link from "next/link";
 import { signOutAction } from "@/app/auth/actions";
+import { CustomerTabBar } from "@/components/app/role-tabs";
+import { InAppPushHost } from "@/components/notifications/in-app-push-host";
 import { NotificationBellHost } from "@/components/notifications/notification-bell-host";
 
 type CustomerShellProps = {
   title?: string;
   userName?: string | null;
   signedIn?: boolean;
+  headerAction?: React.ReactNode;
   children: React.ReactNode;
 };
 
 export async function CustomerShell({
-  title = "Browse",
+  title = "Entdecken",
   userName,
   signedIn = true,
+  headerAction,
   children,
 }: CustomerShellProps) {
   return (
-    <main className="min-h-screen bg-cream">
-      <header className="border-b border-ink/10 bg-paper/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-5">
-          <div>
-            <Link href="/" className="font-serif text-2xl text-ink">
-              TalentMatch
-            </Link>
-            <p className="mt-1 text-xs uppercase tracking-[0.22em] text-gold-deep">
-              {title}
-            </p>
+    <main className="min-h-screen pb-24">
+      {signedIn ? <InAppPushHost /> : null}
+      <header className="ui-nav">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="min-w-0">
+            <p className="font-serif text-xl text-ink">TalentMatch</p>
+            <p className="ui-kicker mt-0.5 truncate">{title}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
+            {headerAction}
             {signedIn ? (
               <>
                 {userName ? (
-                  <p className="hidden text-sm text-ink-soft sm:block">{userName}</p>
+                  <p className="hidden max-w-32 truncate text-sm text-ink-soft sm:block">{userName}</p>
                 ) : null}
                 <NotificationBellHost />
                 <form action={signOutAction}>
-                  <button
-                    type="submit"
-                    className="rounded-full border border-ink/15 px-4 py-2 text-sm text-ink transition hover:border-gold"
-                  >
+                  <button type="submit" className="ui-btn-secondary px-3 text-xs">
                     Abmelden
                   </button>
                 </form>
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="rounded-full border border-ink/15 px-4 py-2 text-sm text-ink transition hover:border-gold"
-                >
+                <Link href="/login" className="ui-btn-secondary px-3 text-xs">
                   Anmelden
                 </Link>
-                <Link
-                  href="/register"
-                  className="rounded-full bg-ink px-4 py-2 text-sm text-cream transition hover:bg-gold-deep"
-                >
+                <Link href="/register" className="ui-btn-primary px-3 text-xs">
                   Registrieren
                 </Link>
               </>
@@ -62,7 +55,8 @@ export async function CustomerShell({
           </div>
         </div>
       </header>
-      <div className="mx-auto max-w-6xl px-6 py-10">{children}</div>
+      <div className="app-screen ui-page mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">{children}</div>
+      {signedIn ? <CustomerTabBar /> : null}
     </main>
   );
 }

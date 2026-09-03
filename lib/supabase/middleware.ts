@@ -37,6 +37,21 @@ export async function updateSession(request: NextRequest) {
     path.includes("/apply");
 
   const role = user?.user_metadata?.role as string | undefined;
+  const provider = user?.app_metadata?.provider as string | undefined;
+
+  // Social-Login ohne gewaehlte Rolle: erst die Rollen-Auswahl abschliessen.
+  if (
+    user &&
+    !role &&
+    (provider === "google" || provider === "apple") &&
+    path !== "/auth/role" &&
+    !path.startsWith("/auth/callback")
+  ) {
+    const roleUrl = request.nextUrl.clone();
+    roleUrl.pathname = "/auth/role";
+    roleUrl.search = "";
+    return NextResponse.redirect(roleUrl);
+  }
 
   if (user && role !== "business" && role !== "admin") {
     try {
@@ -74,9 +89,30 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && path.startsWith("/business")) {
-    const role = user.user_metadata?.role as string | undefined;
-    if (role !== "business" && role !== "admin") {
+  if (user && path === "/") {
+    const home = request.nextUrl.clone();
+    home.pathname = redirectPathForRole(role ?? "customer");
+    home.search = "";
+    return NextResponse.redirect(home);
+  }
+
+  if (user && (role === "business" || role === "admin")) {
+    if (path.startsWith("/business/models")) {
+      const inboxUrl = request.nextUrl.clone();
+      inboxUrl.pathname = "/business/applications";
+      inboxUrl.search = "";
+      return NextResponse.redirect(inboxUrl);
+    }
+    if (path.startsWith("/dashboard") || path.startsWith("/offers")) {
+      const salonUrl = request.nextUrl.clone();
+      salonUrl.pathname = "/business/dashboard";
+      salonUrl.search = "";
+      return NextResponse.redirect(salonUrl);
+    }
+  }
+
+  if (user && role !== "business" && role !== "admin") {
+    if (path.startsWith("/business")) {
       const dashboardUrl = request.nextUrl.clone();
       dashboardUrl.pathname = "/dashboard";
       dashboardUrl.search = "";

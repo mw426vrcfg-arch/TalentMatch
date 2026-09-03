@@ -17,7 +17,7 @@ export function ReviewButtons({ applicationId }: { applicationId: string }) {
   return (
     <div className="space-y-3">
       {state.error && (
-        <p className="rounded-2xl border border-rose/40 bg-rose/10 px-4 py-3 text-sm text-ink">
+        <p className="ui-alert-error">
           {state.error}
         </p>
       )}
@@ -28,7 +28,7 @@ export function ReviewButtons({ applicationId }: { applicationId: string }) {
           name="decision"
           value="accepted"
           disabled={pending}
-          className="rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-gold-deep disabled:opacity-60"
+          className="ui-btn-primary"
         >
           {pending ? "Wird gespeichert…" : "Akzeptieren"}
         </button>
@@ -37,7 +37,7 @@ export function ReviewButtons({ applicationId }: { applicationId: string }) {
           name="decision"
           value="rejected"
           disabled={pending}
-          className="rounded-full border border-ink/15 px-5 py-2.5 text-sm text-ink transition hover:border-rose disabled:opacity-60"
+          className="ui-btn-danger"
         >
           Ablehnen
         </button>

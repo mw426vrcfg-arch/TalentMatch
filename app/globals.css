@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --cream: #f4eee6;
-  --cream-2: #ebe2d4;
-  --ink: #1c1714;
-  --ink-soft: #5c534c;
-  --gold: #b08d57;
-  --gold-deep: #8f6e3e;
-  --rose: #c9a9a3;
-  --paper: #fffcf8;
+  --cream: #e8eaef;
+  --cream-2: #dfe2e8;
+  --ink: #1d1d1f;
+  --ink-soft: #6e6e73;
+  --gold: #424245;
+  --gold-deep: #1d1d1f;
+  --rose: #b42318;
+  --paper: rgba(255, 255, 255, 0.72);
 }
 
 @theme inline {
@@ -20,15 +20,276 @@
   --color-gold-deep: var(--gold-deep);
   --color-rose: var(--rose);
   --color-paper: var(--paper);
-  --font-sans: var(--font-dm-sans);
+  --font-sans: var(--font-plus-jakarta);
   --font-serif: var(--font-cormorant);
+  --animate-enter: enter 0.5s ease-out both;
+  --animate-app: app-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-push: push-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-ptr: ptr-spin 0.8s steps(8) infinite;
+}
+
+@keyframes ptr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes app-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes push-in {
+  from {
+    opacity: 0;
+    transform: translateY(-120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes urgent-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(29, 29, 31, 0.2),
+      0 1px 0 rgba(255, 255, 255, 0.88) inset,
+      0 22px 64px rgba(15, 15, 20, 0.12);
+    border-color: rgba(29, 29, 31, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 9px rgba(29, 29, 31, 0),
+      0 1px 0 rgba(255, 255, 255, 0.95) inset,
+      0 36px 90px rgba(15, 15, 20, 0.2);
+    border-color: rgba(29, 29, 31, 0.42);
+  }
+}
+
+@keyframes urgent-badge {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(1.04);
+  }
 }
 
 body {
-  background: var(--cream);
+  background:
+    radial-gradient(ellipse 90% 55% at 8% -15%, rgba(255, 255, 255, 0.95), transparent 52%),
+    radial-gradient(ellipse 55% 45% at 92% 8%, rgba(170, 182, 205, 0.38), transparent 48%),
+    radial-gradient(ellipse 60% 40% at 50% 110%, rgba(190, 198, 214, 0.45), transparent 50%),
+    linear-gradient(180deg, #eef0f4 0%, #e2e5ec 100%);
   color: var(--ink);
+  min-height: 100vh;
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--gold) 35%, white);
+  background: color-mix(in srgb, var(--ink) 12%, white);
+}
+
+a,
+button,
+input,
+textarea,
+select,
+label {
+  transition:
+    color 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:not(:disabled):hover,
+a.ui-btn-primary:hover,
+a.ui-btn-secondary:hover,
+a.ui-btn-danger:hover,
+a.ui-chip:hover,
+a.ui-icon-btn:hover {
+  transform: scale(1.015);
+}
+
+button:not(:disabled):active,
+a.ui-btn-primary:active,
+a.ui-btn-secondary:active,
+a.ui-btn-danger:active,
+a.ui-chip:active,
+a.ui-icon-btn:active {
+  transform: scale(0.95);
+}
+
+@layer components {
+  .ui-glass {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.7) inset,
+      0 18px 50px rgba(15, 15, 20, 0.06);
+  }
+
+  .ui-card {
+    @apply rounded-[28px] border border-white/20 bg-white/70 shadow-[0_18px_50px_rgba(15,15,20,0.06)] backdrop-blur-md transition duration-300 ease-out;
+  }
+
+  .ui-card-hover {
+    @apply rounded-[28px] border border-white/20 bg-white/70 shadow-[0_18px_50px_rgba(15,15,20,0.06)] backdrop-blur-md transition duration-300 ease-out hover:-translate-y-1 hover:scale-[1.015] hover:border-white/40 hover:bg-white/85 hover:shadow-[0_28px_70px_rgba(15,15,20,0.12)] active:scale-[0.99];
+  }
+
+  .ui-card-urgent {
+    position: relative;
+    border-radius: 28px;
+    border: 1px solid rgba(29, 29, 31, 0.28);
+    background:
+      linear-gradient(165deg, rgba(255, 255, 255, 0.92) 0%, rgba(236, 238, 243, 0.78) 48%, rgba(255, 255, 255, 0.7) 100%);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    animation: urgent-pulse 2.4s ease-in-out infinite;
+    transition:
+      transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .ui-card-urgent:hover {
+    transform: translateY(-4px) scale(1.015);
+  }
+
+  .ui-urgent-badge {
+    animation: urgent-badge 1.8s ease-in-out infinite;
+  }
+
+  .ui-press {
+    @apply cursor-pointer transition-all duration-300 ease-out hover:scale-[1.015] active:scale-95;
+  }
+
+  .ui-btn {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full px-5 text-sm font-medium transition-all duration-300 ease-out hover:scale-[1.015] active:scale-95 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .ui-btn-primary {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 px-5 text-sm font-medium text-white shadow-sm transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-neutral-800 active:scale-95 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .ui-btn-secondary {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-neutral-200/60 bg-white/60 px-5 text-sm font-medium text-neutral-800 shadow-[0_2px_10px_rgba(0,0,0,0.02)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-white/90 active:scale-95 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .ui-btn-danger {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-rose/25 bg-white/60 px-5 text-sm font-medium text-neutral-800 shadow-[0_2px_10px_rgba(180,35,24,0.06)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.015] hover:border-rose/40 hover:bg-rose/10 active:scale-95 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .ui-icon-btn {
+    @apply inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-neutral-200/60 bg-white/60 text-neutral-800 shadow-[0_2px_10px_rgba(0,0,0,0.02)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-white/90 hover:text-neutral-900 active:scale-95;
+  }
+
+  .ui-input {
+    @apply w-full min-h-11 rounded-xl border border-neutral-200/80 bg-white/50 px-4 py-3 text-sm text-neutral-800 outline-none backdrop-blur-sm transition-all duration-200 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-400;
+  }
+
+  .ui-chip {
+    @apply inline-flex min-h-10 cursor-pointer items-center rounded-full border border-neutral-200/60 bg-white/60 px-4 py-2 text-sm font-medium text-neutral-800 shadow-[0_2px_10px_rgba(0,0,0,0.02)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-white/90 active:scale-95;
+  }
+
+  .ui-chip-active {
+    @apply inline-flex min-h-10 cursor-pointer items-center rounded-full border border-neutral-800 bg-neutral-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-neutral-800 active:scale-95;
+  }
+
+  .ui-choice {
+    @apply inline-flex cursor-pointer select-none items-center rounded-full border border-neutral-200/60 bg-white/60 px-3.5 py-1.5 text-xs font-medium text-neutral-600 shadow-[0_2px_10px_rgba(0,0,0,0.02)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-white/90 active:scale-95;
+  }
+
+  .ui-choice-active {
+    @apply inline-flex cursor-pointer select-none items-center rounded-full border border-neutral-800 bg-neutral-900 px-3.5 py-1.5 text-xs font-medium text-white shadow-md transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-neutral-800 active:scale-95;
+  }
+
+  .ui-choice-card {
+    @apply flex h-full cursor-pointer flex-col justify-center rounded-2xl border border-neutral-200/60 bg-white/60 px-4 py-4 text-left shadow-[0_2px_10px_rgba(0,0,0,0.02)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-white/90 active:scale-95;
+  }
+
+  .ui-choice-card-active {
+    @apply flex h-full cursor-pointer flex-col justify-center rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-4 text-left text-white shadow-sm transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-neutral-800 active:scale-95;
+  }
+
+  .ui-kicker {
+    @apply text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400;
+  }
+
+  .ui-page {
+    @apply animate-enter;
+  }
+
+  /* Verhindert, dass der Browser beim Ziehen sein eigenes Reload auslöst. */
+  .ptr-lock {
+    overscroll-behavior-y: contain;
+  }
+
+  .ui-swipe-track {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .ui-swipe-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-screen {
+    animation: app-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .ui-empty {
+    @apply rounded-[28px] border border-dashed border-white/40 bg-white/50 px-5 py-10 text-sm text-ink-soft backdrop-blur-md sm:px-6;
+  }
+
+  .ui-alert {
+    @apply rounded-2xl border border-white/20 bg-white/70 px-4 py-3 text-sm text-ink shadow-[0_8px_24px_rgba(15,15,20,0.05)] backdrop-blur-md;
+  }
+
+  .ui-alert-ok {
+    @apply rounded-2xl border border-white/20 bg-white/80 px-4 py-3 text-sm text-ink shadow-[0_8px_24px_rgba(15,15,20,0.05)] backdrop-blur-md;
+  }
+
+  .ui-alert-error {
+    @apply rounded-2xl border border-rose/20 bg-white/75 px-4 py-3 text-sm text-ink shadow-[0_8px_24px_rgba(180,35,24,0.08)] backdrop-blur-md;
+  }
+
+  .ui-link {
+    @apply cursor-pointer text-sm font-medium text-neutral-700 underline-offset-4 transition-all duration-300 ease-out hover:text-neutral-900 hover:underline;
+  }
+
+  .ui-badge {
+    @apply inline-flex items-center rounded-full border border-white/20 bg-white/70 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-600 backdrop-blur-md;
+  }
+
+  .ui-file {
+    @apply w-full rounded-xl border border-neutral-200/80 bg-white/50 px-3 py-3 text-sm text-neutral-800 backdrop-blur-sm transition-all duration-200 file:mr-3 file:cursor-pointer file:rounded-full file:border file:border-neutral-800 file:bg-neutral-900 file:px-4 file:py-2 file:text-xs file:font-medium file:text-white file:shadow-sm file:transition-all file:duration-300 file:ease-out hover:file:scale-[1.015] hover:file:bg-neutral-800;
+  }
+
+  .ui-nav {
+    @apply sticky top-0 z-20 border-b border-neutral-200/60 bg-white/70 shadow-[0_4px_30px_rgba(0,0,0,0.02)] backdrop-blur-xl;
+  }
+
+  .ui-tabbar {
+    @apply fixed right-0 bottom-0 left-0 z-40 border-t border-neutral-200/60 bg-white/70 shadow-[0_-4px_30px_rgba(0,0,0,0.02)] backdrop-blur-xl;
+  }
 }

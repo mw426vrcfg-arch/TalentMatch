@@ -11,7 +11,7 @@ create table if not exists public.notifications (
   message text not null,
   application_id uuid references public.applications (id) on delete set null,
   offer_id uuid references public.offers (id) on delete set null,
-  read_at timestamptz,
+  is_read boolean not null default false,
   created_at timestamptz not null default now(),
   constraint notifications_type_check check (
     type in (
@@ -28,7 +28,7 @@ create index if not exists notifications_user_id_idx
 
 create index if not exists notifications_unread_idx
   on public.notifications (user_id)
-  where read_at is null;
+  where is_read = false;
 
 alter table public.notifications enable row level security;
 alter table public.notifications force row level security;

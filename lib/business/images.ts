@@ -51,11 +51,49 @@ export function resolveLogoUrl(value: string | null | undefined) {
   }
 
   if (/^https?:\/\//i.test(value)) {
-    return value;
+    return value.split("?")[0];
   }
 
   const path = value.replace(/^\/+/, "");
   return `${getSupabaseUrl()}/storage/v1/object/public/${BUSINESS_IMAGES_BUCKET}/${path}`;
+}
+
+export async function uploadOfferImage(
+  admin: ReturnType<typeof createAdminClient>,
+  businessId: string,
+  offerId: string,
+  file: File,
+) {
+  const bucket = await ensureBusinessImagesBucket(admin);
+  const folder = `${businessId}/offers`;
+  const path = `${folder}/${offerId}.${fileExtension(file)}`;
+  const body = await fileToUploadBody(file);
+
+  const { data: existing } = await admin.storage.from(bucket).list(folder);
+  const stale = (existing ?? [])
+    .filter((item) => item.name.startsWith(`${offerId}.`))
+    .map((item) => `${folder}/${item.name}`)
+    .filter((name) => name !== path);
+
+  if (stale.length > 0) {
+    await admin.storage.from(bucket).remove(stale);
+  }
+
+  const { error } = await admin.storage.from(bucket).upload(path, body, {
+    contentType: file.type || "image/jpeg",
+    upsert: true,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const { data } = admin.storage.from(bucket).getPublicUrl(path);
+  const publicUrl = data.publicUrl?.split("?")[0];
+  if (!publicUrl) {
+    throw new Error("Öffentliche Bild-URL konnte nicht erzeugt werden.");
+  }
+  return publicUrl;
 }
 
 export async function uploadSalonLogo(
@@ -87,5 +125,9 @@ export async function uploadSalonLogo(
   }
 
   const { data } = admin.storage.from(bucket).getPublicUrl(path);
-  return `${data.publicUrl}?v=${Date.now()}`;
+  const publicUrl = data.publicUrl?.split("?")[0];
+  if (!publicUrl) {
+    throw new Error("Öffentliche Bild-URL konnte nicht erzeugt werden.");
+  }
+  return publicUrl;
 }

@@ -1,8 +1,17 @@
 import Link from "next/link";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { RegisterForm } from "@/components/auth/register-form";
+import { isReferralUserId } from "@/lib/referrals/store";
 
-export default function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ role?: string; ref?: string }>;
+}) {
+  const { role, ref } = await searchParams;
+  const referredBy = isReferralUserId(ref) ? String(ref).trim() : "";
+  const initialRole = role === "business" || referredBy ? "business" : "customer";
+
   return (
     <AuthShell
       title="Konto erstellen"
@@ -10,13 +19,13 @@ export default function RegisterPage() {
       footer={
         <>
           Bereits registriert?{" "}
-          <Link href="/login" className="font-medium text-gold-deep underline-offset-4 hover:underline">
+          <Link href="/login" className="ui-link">
             Anmelden
           </Link>
         </>
       }
     >
-      <RegisterForm />
+      <RegisterForm initialRole={initialRole} referredBy={referredBy} />
     </AuthShell>
   );
 }

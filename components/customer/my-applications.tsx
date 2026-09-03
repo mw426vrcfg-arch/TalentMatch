@@ -15,7 +15,7 @@ export function MyApplications({
     <section className="mb-12">
       <LiveRefresh intervalMs={4000} />
       <div className="max-w-2xl">
-        <p className="text-xs uppercase tracking-[0.24em] text-gold-deep">Deine Bewerbungen</p>
+        <p className="ui-kicker">Deine Bewerbungen</p>
         <h2 className="mt-3 font-serif text-3xl text-ink">Status vom Salon</h2>
         <p className="mt-2 text-sm text-ink-soft">
           Pending, Accepted oder Rejected erscheint hier, sobald der Salon entscheidet.
@@ -24,39 +24,48 @@ export function MyApplications({
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {applications.length === 0 ? (
-          <div className="rounded-[1.75rem] border border-dashed border-ink/15 bg-paper/70 px-6 py-10 text-sm text-ink-soft md:col-span-2">
+          <div className="ui-empty md:col-span-2">
             Noch keine Bewerbung. Wähle ein Angebot und bewirb dich auf einen Slot.
           </div>
         ) : (
           applications.map((application) => (
             <article
               key={application.id}
-              className="rounded-[1.75rem] border border-ink/10 bg-paper p-5"
+              className="ui-card p-5"
             >
               <div className="flex items-start justify-between gap-3">
                 <h3 className="font-serif text-2xl text-ink">{application.offer_title}</h3>
                 <span
-                  className={`rounded-full px-3 py-1 text-xs uppercase tracking-wide ${
+                  className={`ui-badge shrink-0 ${
                     application.booking_status === "confirmed" || application.status === "accepted"
-                      ? "bg-gold/20 text-gold-deep"
+                      ? "bg-zinc-900 text-cream"
                       : application.status === "rejected"
-                        ? "bg-rose/20 text-ink"
-                        : "bg-cream text-ink-soft"
+                        ? "bg-rose/10 text-rose"
+                        : ""
                   }`}
                 >
-                  {application.booking_status === "confirmed"
+                  {application.booking_status === "completed"
+                    ? APPLICATION_STATUS_LABEL.completed
+                    : application.booking_status === "confirmed"
                     ? APPLICATION_STATUS_LABEL.confirmed
                     : (APPLICATION_STATUS_LABEL[application.status] ?? application.status)}
                 </span>
               </div>
-              {application.salon_name ? (
-                <p className="mt-2 text-sm text-ink-soft">{application.salon_name}</p>
-              ) : null}
+              {application.identity_revealed ? (
+                <div className="mt-3 space-y-1 text-sm text-ink">
+                  <p className="font-medium">{application.salon_name}</p>
+                  {application.salon_address ? <p>{application.salon_address}</p> : null}
+                  {application.salon_phone ? <p>{application.salon_phone}</p> : null}
+                  <p className="text-ink-soft">{application.region}</p>
+                </div>
+              ) : (
+                <div className="mt-2 space-y-1 text-sm text-ink-soft">
+                  <p>{application.partner_name}</p>
+                  <p>{application.region}</p>
+                </div>
+              )}
               {application.slot_start ? (
                 <p className="mt-2 text-sm text-ink-soft">{formatSlot(application.slot_start)}</p>
-              ) : null}
-              {application.location ? (
-                <p className="text-sm text-ink-soft">{application.location}</p>
               ) : null}
               <p className="mt-3 text-sm leading-relaxed text-ink">
                 {applicationStatusMessage(application.status, application.booking_status)}

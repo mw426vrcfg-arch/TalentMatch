@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { parseSlotIdFromNotes } from "@/lib/applications/slot-from-notes";
 import { requireBusiness } from "@/lib/auth/require-business";
 import { createNotification } from "@/lib/notifications/create";
+import { refreshOfferAvailability } from "@/lib/offers/availability";
 import { formatAppointmentWhen } from "@/lib/offers/format";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readId } from "@/lib/security/sanitize";
 
 export type ReviewState = {
   error?: string;
@@ -45,22 +47,6 @@ async function loadOwnedApplication(applicationId: string, businessId: string) {
     },
     error: null,
   };
-}
-
-async function refreshOfferAvailability(
-  admin: ReturnType<typeof createAdminClient>,
-  offerId: string,
-) {
-  const { data: openSlots } = await admin
-    .from("offer_slots")
-    .select("id")
-    .eq("offer_id", offerId)
-    .eq("is_booked", false);
-
-  await admin
-    .from("offers")
-    .update({ status: openSlots && openSlots.length > 0 ? "active" : "full" })
-    .eq("id", offerId);
 }
 
 async function rejectOtherApplicationsForSlot(
@@ -114,7 +100,7 @@ export async function reviewApplicationAction(
     return { error: "Kein Salonprofil gefunden." };
   }
 
-  const applicationId = String(formData.get("application_id") ?? "").trim();
+  const applicationId = readId(formData, "application_id");
   const decision = String(formData.get("decision") ?? "").trim();
 
   if (!applicationId || (decision !== "accepted" && decision !== "rejected")) {
@@ -164,8 +150,14 @@ export async function reviewApplicationAction(
         return { error: "Der gewünschte Slot existiert nicht mehr." };
       }
 
-      if (slot.is_booked) {
-        return { error: "Dieser Slot ist bereits reserviert." };
+      const { data: existingBooking } = await admin
+        .from("bookings")
+        .select("id")
+        .eq("slot_id", application.slot_id)
+        .maybeSingle();
+
+      if (slot.is_booked || existingBooking) {
+        return { error: "Dieser Slot ist bereits ausgebucht." };
       }
     }
 
@@ -243,5 +235,6 @@ export async function reviewApplicationAction(
   revalidatePath("/business/dashboard");
   revalidatePath("/dashboard");
   revalidatePath("/offers");
+  revalidatePath(`/offers/${application.offer_id}`);
   return {};
 }

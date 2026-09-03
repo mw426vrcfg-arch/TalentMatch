@@ -1,6 +1,7 @@
 import { type User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { type UserRole } from "@/lib/supabase/env";
+import { isReferralUserId, recordSalonReferral } from "@/lib/referrals/store";
 
 type Profile = {
   id: string;
@@ -46,14 +47,18 @@ export async function ensureProfile(user: User): Promise<Profile> {
       String(user.user_metadata?.business_name ?? "").trim() || "Mein Salon";
     const location = String(user.user_metadata?.location ?? "").trim();
 
-    const { data: existing } = await admin
+    const { data: existingByUser } = await admin
       .from("business_profiles")
       .select("id")
       .eq("user_id", user.id)
       .maybeSingle();
+    const { data: existingById } = existingByUser
+      ? { data: existingByUser }
+      : await admin.from("business_profiles").select("id").eq("id", user.id).maybeSingle();
 
-    if (!existing) {
+    if (!existingByUser && !existingById) {
       const { error: businessError } = await admin.from("business_profiles").insert({
+        id: user.id,
         user_id: user.id,
         business_name: businessName,
         location,
@@ -62,6 +67,30 @@ export async function ensureProfile(user: User): Promise<Profile> {
       if (businessError) {
         throw new Error(businessError.message);
       }
+    }
+
+    const referredBy = String(user.user_metadata?.referred_by ?? "").trim();
+    if (isReferralUserId(referredBy)) {
+      await recordSalonReferral(admin, {
+        referrerUserId: referredBy,
+        referredUserId: user.id,
+      });
+    }
+  }
+
+  if (role === "customer") {
+    const { data: customerExisting, error: customerLoadError } = await admin
+      .from("customer_profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!customerLoadError && !customerExisting) {
+      await admin.from("customer_profiles").insert({
+        id: user.id,
+        user_id: user.id,
+        full_name: fullName,
+      });
     }
   }
 

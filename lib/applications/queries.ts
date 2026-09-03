@@ -1,5 +1,15 @@
 import { parseSlotIdFromNotes } from "@/lib/applications/slot-from-notes";
 import { signApplicationImages } from "@/lib/applications/image-urls";
+import { resolveAvatarUrl } from "@/lib/customer/images";
+import { loadCustomerProfile } from "@/lib/customer/profile-store";
+import { EMPTY_TREATMENT_PASS, type TreatmentPass } from "@/lib/customer/treatment-pass";
+import { type HairProfile } from "@/lib/hair/criteria";
+import {
+  isSalonIdentityRevealed,
+  partnerSalonLabel,
+  regionLabel,
+} from "@/lib/offers/anonymize";
+import { loadRatingAverages } from "@/lib/ratings/store";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type SalonApplication = {
@@ -17,7 +27,13 @@ export type SalonApplication = {
     full_name: string;
     email: string;
     phone: string | null;
+    bio: string | null;
+    avatar_url: string | null;
     active_strikes: number;
+    rating_average: number | null;
+    rating_count: number;
+    hair: HairProfile;
+    treatment_pass: TreatmentPass;
   };
 };
 
@@ -69,12 +85,13 @@ export async function loadSalonPendingApplications(businessId: string) {
     ...new Set(rows.map((row) => parseSlotIdFromNotes(row.notes as string | null)).filter(Boolean)),
   ] as string[];
 
-  const [{ data: users }, { data: slots }, { data: strikes }] = await Promise.all([
+  const [{ data: users }, { data: slots }, { data: strikes }, averages] = await Promise.all([
     admin.from("users").select("id, full_name, email, phone").in("id", customerIds),
     slotIds.length > 0
       ? admin.from("offer_slots").select("id, start_time").in("id", slotIds)
       : Promise.resolve({ data: [] as { id: string; start_time: string }[] }),
     admin.from("strikes").select("customer_id").eq("active", true).in("customer_id", customerIds),
+    loadRatingAverages(customerIds),
   ]);
 
   const userMap = new Map((users ?? []).map((user) => [user.id as string, user]));
@@ -92,6 +109,9 @@ export async function loadSalonPendingApplications(businessId: string) {
       const user = userMap.get(customerId);
       const slotId = parseSlotIdFromNotes(row.notes as string | null);
 
+      const customerProfile = await loadCustomerProfile(admin, customerId);
+      const rating = averages.get(customerId) ?? { average: null, count: 0 };
+
       return {
         id: row.id as string,
         notes: (row.notes as string | null) ?? null,
@@ -106,10 +126,19 @@ export async function loadSalonPendingApplications(businessId: string) {
         slot_start: slotId ? (slotMap.get(slotId) ?? null) : null,
         customer: {
           id: customerId,
-          full_name: (user?.full_name as string | undefined) || "Kunde",
+          full_name:
+            customerProfile.profile?.full_name ||
+            (user?.full_name as string | undefined) ||
+            "Kunde",
           email: (user?.email as string | undefined) || "",
           phone: (user?.phone as string | null | undefined) ?? null,
+          bio: customerProfile.profile?.bio ?? null,
+          avatar_url: resolveAvatarUrl(customerProfile.profile?.avatar_url),
           active_strikes: strikeCounts.get(customerId) ?? 0,
+          rating_average: rating.average,
+          rating_count: rating.count,
+          hair: customerProfile.profile?.hair ?? { structure: null, length: null, chemical: null },
+          treatment_pass: customerProfile.profile?.treatment_pass ?? EMPTY_TREATMENT_PASS,
         },
       };
     }),
@@ -122,8 +151,12 @@ export type CustomerApplication = {
   notes: string | null;
   created_at: string;
   offer_title: string;
+  partner_name: string;
+  region: string;
+  identity_revealed: boolean;
   salon_name: string | null;
-  location: string | null;
+  salon_address: string | null;
+  salon_phone: string | null;
   slot_start: string | null;
   booking_status: string | null;
 };
@@ -154,7 +187,7 @@ export async function loadCustomerApplications(customerId: string) {
   const [{ data: offers }, { data: slots }, { data: bookings }] = await Promise.all([
     admin
       .from("offers")
-      .select("id, title, business_profiles(business_name, location)")
+      .select("id, title, business_profiles(id, business_name, location, address, phone)")
       .in("id", offerIds),
     slotIds.length > 0
       ? admin.from("offer_slots").select("id, start_time").in("id", slotIds)
@@ -169,16 +202,32 @@ export async function loadCustomerApplications(customerId: string) {
     (offers ?? []).map((offer) => {
       const profile = asOne(
         offer.business_profiles as
-          | { business_name?: string; location: string }
-          | { business_name?: string; location: string }[]
+          | {
+              id?: string;
+              business_name?: string;
+              location: string;
+              address?: string | null;
+              phone?: string | null;
+            }
+          | {
+              id?: string;
+              business_name?: string;
+              location: string;
+              address?: string | null;
+              phone?: string | null;
+            }[]
           | null,
       );
+      const stableId = profile?.id || (offer.id as string);
       return [
         offer.id as string,
         {
           title: offer.title as string,
-          salon_name: profile?.business_name ?? null,
-          location: profile?.location ?? null,
+          partner_name: partnerSalonLabel(stableId),
+          region: regionLabel(profile?.location),
+          salon_name: profile?.business_name?.trim() || null,
+          salon_address: profile?.address?.trim() || null,
+          salon_phone: profile?.phone?.trim() || null,
         },
       ];
     }),
@@ -194,6 +243,8 @@ export async function loadCustomerApplications(customerId: string) {
   return rows.map((row) => {
     const offer = offerMap.get(row.offer_id as string);
     const slotId = parseSlotIdFromNotes(row.notes as string | null);
+    const bookingStatus = bookingMap.get(row.id as string) ?? null;
+    const revealed = isSalonIdentityRevealed(row.status as string, bookingStatus);
 
     return {
       id: row.id as string,
@@ -201,10 +252,14 @@ export async function loadCustomerApplications(customerId: string) {
       notes: (row.notes as string | null) ?? null,
       created_at: row.created_at as string,
       offer_title: offer?.title ?? "Angebot",
-      salon_name: offer?.salon_name ?? null,
-      location: offer?.location ?? null,
+      partner_name: offer?.partner_name ?? partnerSalonLabel(row.offer_id as string),
+      region: offer?.region ?? regionLabel(null),
+      identity_revealed: revealed,
+      salon_name: revealed ? offer?.salon_name ?? null : null,
+      salon_address: revealed ? offer?.salon_address ?? null : null,
+      salon_phone: revealed ? offer?.salon_phone ?? null : null,
       slot_start: slotId ? (slotMap.get(slotId) ?? null) : null,
-      booking_status: bookingMap.get(row.id as string) ?? null,
+      booking_status: bookingStatus,
     };
   });
 }

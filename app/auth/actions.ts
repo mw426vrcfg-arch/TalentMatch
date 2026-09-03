@@ -5,16 +5,22 @@ import { redirect } from "next/navigation";
 import { ensureProfile, getProfile } from "@/lib/auth/ensure-profile";
 import { redirectPathForRole } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { restoreCustomerIfEligible } from "@/lib/strikes/expire";
 import { getStrikeRestriction, isAuthBanError } from "@/lib/strikes/restriction";
+import { isReferralUserId } from "@/lib/referrals/store";
+import {
+  readLine,
+  readSecret,
+  sanitizeEmail,
+  sanitizePhone,
+  TEXT_LIMITS,
+} from "@/lib/security/sanitize";
 
 export type AuthState = {
   error?: string;
   success?: string;
 };
-
-function readString(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
-}
 
 function safeInternalPath(path: string) {
   if (path.startsWith("/") && !path.startsWith("//")) {
@@ -28,24 +34,41 @@ export async function loginAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const email = readString(formData, "email");
-  const password = readString(formData, "password");
-  const next = safeInternalPath(readString(formData, "next"));
+  const email = readLine(formData, "email", TEXT_LIMITS.email).toLowerCase();
+  // Passwörter werden nie bereinigt – jedes Zeichen muss exakt erhalten bleiben.
+  const password = readSecret(formData, "password");
+  const next = safeInternalPath(readLine(formData, "next", 512));
 
   if (!email || !password) {
     return { error: "Bitte E-Mail und Passwort eingeben." };
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  let { error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) {
-    if (isAuthBanError(error.message)) {
+  if (error && isAuthBanError(error.message)) {
+    const admin = createAdminClient();
+    const { data: bannedUser } = await admin
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (bannedUser?.id) {
+      const restored = await restoreCustomerIfEligible(String(bannedUser.id));
+      if (restored.length > 0) {
+        const retry = await supabase.auth.signInWithPassword({ email, password });
+        error = retry.error;
+      }
+    }
+
+    if (error) {
       return {
         error:
           "Dein Konto ist gesperrt. Du hast 3 aktive Strikes wegen No-Shows und kannst dich nicht mehr anmelden.",
       };
     }
+  } else if (error) {
     return { error: "Anmeldung fehlgeschlagen. Prüfe E-Mail und Passwort." };
   }
 
@@ -74,16 +97,22 @@ export async function registerAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const fullName = readString(formData, "full_name");
-  const email = readString(formData, "email");
-  const phone = readString(formData, "phone");
-  const password = readString(formData, "password");
-  const role = readString(formData, "role");
-  const businessName = readString(formData, "business_name");
-  const location = readString(formData, "location");
+  const fullName = readLine(formData, "full_name", TEXT_LIMITS.name);
+  const email = sanitizeEmail(formData.get("email"));
+  const phone = sanitizePhone(formData.get("phone"));
+  const password = readSecret(formData, "password");
+  const role = readLine(formData, "role", 20);
+  const businessName = readLine(formData, "business_name", TEXT_LIMITS.name);
+  const location = readLine(formData, "location", TEXT_LIMITS.location);
+  const rawRef = readLine(formData, "ref", 64);
+  const referredBy = isReferralUserId(rawRef) ? rawRef : "";
 
-  if (!fullName || !email || !password) {
+  if (!fullName || !password) {
     return { error: "Bitte Name, E-Mail und Passwort ausfüllen." };
+  }
+
+  if (!email) {
+    return { error: "Bitte eine gültige E-Mail-Adresse angeben." };
   }
 
   if (role !== "customer" && role !== "business") {
@@ -116,6 +145,7 @@ export async function registerAction(
         phone,
         business_name: businessName,
         location,
+        referred_by: role === "business" && referredBy ? referredBy : undefined,
       },
     },
   });

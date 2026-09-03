@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { type NotificationRow } from "@/lib/notifications/create";
+import { markNotificationsReadAction } from "@/app/notifications/actions";
+import {
+  mapNotificationRow,
+  type NotificationRow,
+} from "@/lib/notifications/create";
 import { createClient } from "@/lib/supabase/client";
 
 function formatWhen(iso: string) {
@@ -11,24 +15,6 @@ function formatWhen(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(iso));
-}
-
-function asNotification(value: unknown): NotificationRow | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-  const row = value as Record<string, unknown>;
-  if (typeof row.id !== "string" || typeof row.title !== "string") {
-    return null;
-  }
-  return {
-    id: row.id,
-    type: String(row.type ?? ""),
-    title: row.title,
-    message: String(row.message ?? ""),
-    read_at: (row.read_at as string | null) ?? null,
-    created_at: String(row.created_at ?? new Date().toISOString()),
-  };
 }
 
 export function NotificationBell({
@@ -44,16 +30,23 @@ export function NotificationBell({
 
   const load = useCallback(async () => {
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("notifications")
-      .select("id, type, title, message, read_at, created_at")
+      .select("id, type, title, message, is_read, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(20);
 
-    if (data) {
-      setItems(data as NotificationRow[]);
+    if (error) {
+      console.error("Notification load failed:", error.message);
+      return;
     }
+
+    setItems(
+      (data ?? [])
+        .map(mapNotificationRow)
+        .filter((row): row is NotificationRow => row !== null),
+    );
   }, [userId]);
 
   useEffect(() => {
@@ -81,7 +74,7 @@ export function NotificationBell({
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          const incoming = asNotification(payload.new);
+          const incoming = mapNotificationRow(payload.new);
           if (!incoming) {
             void load();
             return;
@@ -122,25 +115,19 @@ export function NotificationBell({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, []);
 
-  const unread = items.filter((item) => !item.read_at).length;
+  const unread = items.filter((item) => !item.is_read).length;
 
   async function markAllRead() {
-    const unreadIds = items.filter((item) => !item.read_at).map((item) => item.id);
+    const unreadIds = items.filter((item) => !item.is_read).map((item) => item.id);
     if (unreadIds.length === 0) {
       return;
     }
 
     setItems((current) =>
-      current.map((item) =>
-        item.read_at ? item : { ...item, read_at: new Date().toISOString() },
-      ),
+      current.map((item) => (item.is_read ? item : { ...item, is_read: true })),
     );
 
-    const supabase = createClient();
-    await supabase
-      .from("notifications")
-      .update({ read_at: new Date().toISOString() })
-      .in("id", unreadIds);
+    await markNotificationsReadAction(unreadIds);
   }
 
   async function toggleOpen() {
@@ -156,7 +143,7 @@ export function NotificationBell({
       <button
         type="button"
         onClick={() => void toggleOpen()}
-        className="relative rounded-full border border-ink/15 p-2 text-ink transition hover:border-gold"
+        className="relative ui-icon-btn"
         aria-label={unread > 0 ? `${unread} neue Benachrichtigungen` : "Benachrichtigungen"}
       >
         <svg
@@ -174,16 +161,16 @@ export function NotificationBell({
           />
         </svg>
         {unread > 0 ? (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-semibold leading-none text-white">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose px-1 text-[11px] font-semibold leading-none text-cream">
             {unread > 9 ? "9+" : unread}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-30 mt-3 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-ink/10 bg-paper shadow-[0_20px_50px_rgba(28,23,20,0.12)]">
-          <div className="border-b border-ink/10 px-4 py-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-gold-deep">Mitteilungen</p>
+        <div className="ui-card animate-enter absolute right-0 z-30 mt-3 w-[min(22rem,calc(100vw-2rem))] overflow-hidden">
+          <div className="border-b border-zinc-200 px-4 py-3">
+            <p className="ui-kicker">Mitteilungen</p>
             <p className="mt-1 text-sm text-ink">Neue Bewerbungen und Terminbestätigungen</p>
           </div>
           <ul className="max-h-80 overflow-y-auto">
@@ -193,8 +180,8 @@ export function NotificationBell({
               items.map((item) => (
                 <li
                   key={item.id}
-                  className={`border-b border-ink/5 px-4 py-3 last:border-0 ${
-                    item.read_at ? "" : "bg-gold/10"
+                  className={`border-b border-zinc-100 px-4 py-3 last:border-0 ${
+                    item.is_read ? "" : "bg-zinc-50"
                   }`}
                 >
                   <p className="text-sm font-medium text-ink">{item.title}</p>

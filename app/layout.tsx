@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import { Cormorant_Garamond, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const dmSans = DM_Sans({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-dm-sans",
+  variable: "--font-plus-jakarta",
 });
 
 const cormorant = Cormorant_Garamond({
@@ -25,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de">
-      <body className={`${dmSans.variable} ${cormorant.variable} font-sans antialiased`}>
+      <body className={`${plusJakarta.variable} ${cormorant.variable} min-h-screen font-sans text-ink antialiased`}>
         {children}
       </body>
     </html>

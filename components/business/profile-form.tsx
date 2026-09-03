@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
+  loadMyBusinessProfileAction,
   updateBusinessProfileAction,
   type ProfileFormState,
 } from "@/app/business/profile/actions";
@@ -10,27 +11,78 @@ import { resolveLogoUrl } from "@/lib/business/images";
 
 const initialState: ProfileFormState = {};
 
+type FormValues = {
+  business_name: string;
+  location: string;
+  address: string;
+  phone: string;
+  description: string;
+};
+
+function toFormValues(profile: BusinessProfile | null): FormValues {
+  return {
+    business_name: profile?.business_name ?? "",
+    location: profile?.location ?? "",
+    address: profile?.address ?? "",
+    phone: profile?.phone ?? "",
+    description: profile?.description ?? "",
+  };
+}
+
 export function BusinessProfileForm({
+  userId,
   profile,
 }: {
+  userId: string;
   profile: BusinessProfile | null;
 }) {
   const [state, formAction, pending] = useActionState(
     updateBusinessProfileAction,
     initialState,
   );
-  const logoUrl = resolveLogoUrl(profile?.logo_url);
+  const [values, setValues] = useState<FormValues>(() => toFormValues(profile));
+  const [logoUrl, setLogoUrl] = useState(() => resolveLogoUrl(profile?.logo_url));
+
+  useEffect(() => {
+    setValues(toFormValues(profile));
+    setLogoUrl(resolveLogoUrl(profile?.logo_url));
+  }, [profile]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSavedProfile() {
+      const loaded = await loadMyBusinessProfileAction();
+      if (cancelled || !loaded) {
+        return;
+      }
+      const next = toFormValues(loaded);
+      setValues(next);
+      setLogoUrl(resolveLogoUrl(loaded.logo_url));
+    }
+
+    void loadSavedProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  function updateField(field: keyof FormValues) {
+    return (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setValues((current) => ({ ...current, [field]: event.target.value }));
+    };
+  }
 
   return (
     <form action={formAction} className="space-y-5">
       {state.error && (
-        <p className="rounded-2xl border border-rose/40 bg-rose/10 px-4 py-3 text-sm text-ink">
+        <p className="ui-alert-error">
           {state.error}
         </p>
       )}
 
       <div className="flex items-center gap-4">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-ink/10 bg-cream">
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/70 shadow-[0_8px_24px_rgba(15,15,20,0.05)] backdrop-blur-md">
           {logoUrl ? (
             <img
               src={logoUrl}
@@ -38,7 +90,7 @@ export function BusinessProfileForm({
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="text-xs uppercase tracking-wide text-ink-soft">Logo</span>
+            <span className="ui-kicker">Logo</span>
           )}
         </div>
         <label className="block min-w-0 flex-1">
@@ -47,7 +99,7 @@ export function BusinessProfileForm({
             type="file"
             name="logo"
             accept="image/jpeg,image/png,image/webp,image/gif"
-            className="w-full text-sm text-ink file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-sm file:text-cream"
+            className="ui-file"
           />
           <span className="mt-1 block text-xs text-ink-soft">JPG, PNG oder WebP, max. 2 MB</span>
         </label>
@@ -58,8 +110,9 @@ export function BusinessProfileForm({
         <input
           required
           name="business_name"
-          defaultValue={profile?.business_name ?? ""}
-          className="w-full rounded-2xl border border-ink/10 bg-paper px-4 py-3 text-ink outline-none transition focus:border-gold"
+          value={values.business_name}
+          onChange={updateField("business_name")}
+          className="ui-input"
         />
       </label>
 
@@ -68,19 +121,22 @@ export function BusinessProfileForm({
         <input
           required
           name="location"
-          defaultValue={profile?.location ?? ""}
+          value={values.location}
+          onChange={updateField("location")}
           placeholder="z. B. Zürich"
-          className="w-full rounded-2xl border border-ink/10 bg-paper px-4 py-3 text-ink outline-none transition focus:border-gold"
+          className="ui-input"
         />
       </label>
 
       <label className="block">
         <span className="mb-1.5 block text-sm text-ink-soft">Adresse</span>
+        <input type="hidden" name="street" value={values.address} />
         <input
           name="address"
-          defaultValue={profile?.address ?? ""}
+          value={values.address}
+          onChange={updateField("address")}
           placeholder="Strasse und Hausnummer"
-          className="w-full rounded-2xl border border-ink/10 bg-paper px-4 py-3 text-ink outline-none transition focus:border-gold"
+          className="ui-input"
         />
       </label>
 
@@ -89,9 +145,11 @@ export function BusinessProfileForm({
         <input
           name="phone"
           type="tel"
-          defaultValue={profile?.phone ?? ""}
+          autoComplete="tel"
+          value={values.phone}
+          onChange={updateField("phone")}
           placeholder="+41 …"
-          className="w-full rounded-2xl border border-ink/10 bg-paper px-4 py-3 text-ink outline-none transition focus:border-gold"
+          className="ui-input"
         />
       </label>
 
@@ -100,15 +158,16 @@ export function BusinessProfileForm({
         <textarea
           name="description"
           rows={3}
-          defaultValue={profile?.description ?? ""}
-          className="w-full resize-y rounded-2xl border border-ink/10 bg-paper px-4 py-3 text-ink outline-none transition focus:border-gold"
+          value={values.description}
+          onChange={updateField("description")}
+          className="ui-input resize-y"
         />
       </label>
 
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-full bg-ink px-5 py-3.5 text-sm font-medium text-cream transition hover:bg-gold-deep disabled:opacity-60 sm:w-auto"
+        className="ui-btn-primary w-full sm:w-auto"
       >
         {pending ? "Wird gespeichert…" : "Profil speichern"}
       </button>

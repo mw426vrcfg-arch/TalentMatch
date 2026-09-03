@@ -19,7 +19,7 @@ export function ApplyForm({ offerId, slotId }: ApplyFormProps) {
       <input type="hidden" name="slot_id" value={slotId} />
 
       {state.error && (
-        <p className="rounded-2xl border border-rose/40 bg-rose/10 px-4 py-3 text-sm text-ink">
+        <p className="ui-alert-error">
           {state.error}
         </p>
       )}
@@ -42,7 +42,7 @@ export function ApplyForm({ offerId, slotId }: ApplyFormProps) {
                 type="file"
                 name={name}
                 accept="image/*"
-                className="w-full rounded-2xl border border-ink/10 bg-cream px-3 py-3 text-sm text-ink file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-3 file:py-1.5 file:text-xs file:text-cream"
+                className="ui-file"
               />
             </label>
           ))}
@@ -55,14 +55,14 @@ export function ApplyForm({ offerId, slotId }: ApplyFormProps) {
           name="notes"
           rows={4}
           placeholder="Hatte vor 2 Jahren Blondierung."
-          className="w-full resize-y rounded-2xl border border-ink/10 bg-paper px-4 py-3 text-ink outline-none transition focus:border-gold"
+          className="ui-input resize-y"
         />
       </label>
 
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-full bg-ink px-5 py-3.5 text-sm font-medium text-cream transition hover:bg-gold-deep disabled:opacity-60"
+        className="ui-btn-primary w-full"
       >
         {pending ? "Bewerbung wird gesendet…" : "Submit"}
       </button>

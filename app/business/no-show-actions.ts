@@ -6,6 +6,7 @@ import { requireBusiness } from "@/lib/auth/require-business";
 import { createNotification } from "@/lib/notifications/create";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { banCustomerLogin, getStrikeRestriction } from "@/lib/strikes/restriction";
+import { readId } from "@/lib/security/sanitize";
 
 export type NoShowState = {
   error?: string;
@@ -22,7 +23,7 @@ export async function reportNoShowAction(
     return { error: "Kein Salonprofil gefunden." };
   }
 
-  const bookingId = String(formData.get("booking_id") ?? "").trim();
+  const bookingId = readId(formData, "booking_id");
   if (!bookingId) {
     return { error: "Termin fehlt." };
   }

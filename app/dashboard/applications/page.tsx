@@ -1,0 +1,44 @@
+import { MeineTermine } from "@/components/bookings/meine-termine";
+import { CustomerShell } from "@/components/customer/customer-shell";
+import { MyApplications } from "@/components/customer/my-applications";
+import { RatingWindow } from "@/components/ratings/rating-window";
+import { loadCustomerApplications } from "@/lib/applications/queries";
+import { requireCustomer } from "@/lib/auth/require-customer";
+import { loadCustomerAppointments } from "@/lib/bookings/overview";
+import { loadPendingRatingsForUser } from "@/lib/ratings/store";
+
+export const dynamic = "force-dynamic";
+
+export default async function CustomerApplicationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ applied?: string }>;
+}) {
+  const { applied } = await searchParams;
+  const { user, profile } = await requireCustomer();
+  const [applications, appointments, pendingRatings] = await Promise.all([
+    loadCustomerApplications(profile.id),
+    loadCustomerAppointments(profile.id),
+    loadPendingRatingsForUser({ userId: user.id, role: "customer" }),
+  ]);
+  const openApplications = applications.filter(
+    (application) =>
+      application.status === "pending" ||
+      application.status === "rejected" ||
+      application.status === "cancelled_by_customer" ||
+      application.status === "cancelled_by_salon",
+  );
+
+  return (
+    <CustomerShell title="Bewerbungen" userName={profile.full_name} signedIn>
+      {applied === "1" ? (
+        <p className="ui-alert-ok mb-8">
+          Bewerbung gesendet. Status: pending — der Salon prüft deine Bilder und Notizen.
+        </p>
+      ) : null}
+      <RatingWindow items={pendingRatings} role="customer" />
+      <MeineTermine items={appointments} role="customer" currentUserId={user.id} />
+      <MyApplications applications={openApplications} />
+    </CustomerShell>
+  );
+}

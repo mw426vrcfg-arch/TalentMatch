@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { expireDueStrikes, markCustomerBanned } from "@/lib/strikes/expire";
 
 export type StrikeRestriction = {
   count: number;
@@ -21,6 +22,15 @@ export function strikeLoginErrorParam(restriction: StrikeRestriction) {
 }
 
 export async function getStrikeRestriction(customerId: string): Promise<StrikeRestriction> {
+  try {
+    await expireDueStrikes(customerId);
+  } catch (error) {
+    console.error(
+      "Strike-Verjährung fehlgeschlagen:",
+      error instanceof Error ? error.message : error,
+    );
+  }
+
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("strikes")
@@ -58,6 +68,8 @@ export async function banCustomerLogin(customerId: string) {
   if (error) {
     console.error("Auth-Ban fehlgeschlagen:", error.message);
   }
+
+  await markCustomerBanned(customerId);
 }
 
 export function isAuthBanError(message: string) {

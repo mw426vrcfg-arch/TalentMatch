@@ -11,7 +11,7 @@ export default function LoginPage() {
       footer={
         <>
           Noch kein Konto?{" "}
-          <Link href="/register" className="font-medium text-gold-deep underline-offset-4 hover:underline">
+          <Link href="/register" className="ui-link">
             Registrieren
           </Link>
         </>

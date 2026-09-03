@@ -1,60 +1,64 @@
-import { CityFilter } from "@/components/offers/city-filter";
-import { OfferCard } from "@/components/offers/offer-card";
-import { citiesFromOffers, loadActiveOffers } from "@/lib/offers/load-active-offers";
+import { BrowseSearchBoard } from "@/components/offers/browse-search";
+import { loadFavoriteOfferIds } from "@/lib/favorites/store";
+import { isPerfectHairMatch } from "@/lib/hair/criteria";
+import { loadCustomerProfile } from "@/lib/customer/profile-store";
+import { filterBlockedOffers, loadBlockedSalons, NO_BLOCKED_SALONS } from "@/lib/blacklist/store";
+import { loadCustomerLoyalty } from "@/lib/loyalty/store";
+import { filterOffersForMember, loadActiveOffers } from "@/lib/offers/load-active-offers";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function BrowseOffers({
-  city,
+  query,
   basePath,
+  userId,
 }: {
-  city?: string;
+  query?: string;
   basePath: string;
+  userId?: string | null;
 }) {
+  const admin = createAdminClient();
   const allOffers = await loadActiveOffers();
-  const cities = citiesFromOffers(allOffers);
-  const selectedCity = city?.trim();
-  const offers = selectedCity
-    ? allOffers.filter(
-        (offer) =>
-          offer.location.toLocaleLowerCase("de-CH") ===
-          selectedCity.toLocaleLowerCase("de-CH"),
-      )
-    : allOffers;
+  const loyalty = userId ? await loadCustomerLoyalty(admin, userId) : { points: 0, level: "Bronze" as const };
+  const blocked = userId ? await loadBlockedSalons(userId) : NO_BLOCKED_SALONS;
+  const offers = filterBlockedOffers(filterOffersForMember(allOffers, loyalty.level), blocked);
+  let favoriteIds: string[] = [];
+  let matchIds: string[] = [];
+  if (userId) {
+    try {
+      favoriteIds = await loadFavoriteOfferIds(userId);
+    } catch (error) {
+      console.error("Favorites load failed:", error);
+    }
+    try {
+      const loaded = await loadCustomerProfile(admin, userId);
+      if (loaded.profile?.hair) {
+        matchIds = offers.filter((offer) => isPerfectHairMatch(loaded.profile!.hair, offer.hair)).map((offer) => offer.id);
+      }
+    } catch {
+      matchIds = [];
+    }
+  }
 
   return (
     <>
       <div className="max-w-2xl">
-        <p className="text-xs uppercase tracking-[0.24em] text-gold-deep">
-          Phase 2 · Customer Discovery
-        </p>
+        <p className="ui-kicker">Entdecken</p>
         <h1 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">
-          Starke Deals. Freie Slots. In deiner Stadt.
+          Starke Deals. Freie Slots. In deiner Region.
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-          Entdecke Angebote von Salons — reduzierte Preise für Trainingsslots und kurzfristige
-          Kapazitäten.
+          Suche nach Service, Beschreibung oder Region — auch mit kleinen Tippfehlern.
         </p>
       </div>
 
-      <div className="mt-10">
-        <CityFilter cities={cities} selected={city} basePath={basePath} />
-      </div>
-
-      {offers.length === 0 ? (
-        <div className="mt-10 rounded-[2rem] border border-dashed border-ink/15 bg-paper/70 px-6 py-14 text-center">
-          <p className="font-serif text-2xl text-ink">Keine Angebote gefunden</p>
-          <p className="mt-2 text-sm text-ink-soft">
-            {city
-              ? `In ${city} gibt es gerade keine aktiven Deals. Wähle eine andere Stadt.`
-              : "Sobald Salons Angebote veröffentlichen, erscheinen sie hier."}
-          </p>
-        </div>
-      ) : (
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
-          {offers.map((offer) => (
-            <OfferCard key={offer.id} offer={offer} />
-          ))}
-        </div>
-      )}
+      <BrowseSearchBoard
+        offers={offers}
+        initialQuery={query ?? ""}
+        basePath={basePath}
+        favoriteIds={favoriteIds}
+        showFavorite={Boolean(userId)}
+        matchIds={matchIds}
+      />
     </>
   );
 }

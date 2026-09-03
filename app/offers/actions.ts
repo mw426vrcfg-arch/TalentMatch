@@ -6,7 +6,11 @@ import { APPLICATION_IMAGES_BUCKET } from "@/lib/applications/image-urls";
 import { notesWithSlotRef } from "@/lib/applications/slot-from-notes";
 import { createNotification } from "@/lib/notifications/create";
 import { requireCustomer } from "@/lib/auth/require-customer";
+import { isOfferBlocked, loadBlockedSalons } from "@/lib/blacklist/store";
+import { loadCustomerLoyalty } from "@/lib/loyalty/store";
+import { canSeeVipOffer } from "@/lib/loyalty/levels";
 import { loadAvailableSlot, loadOfferById } from "@/lib/offers/load-active-offers";
+import { readId, readText, TEXT_LIMITS } from "@/lib/security/sanitize";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ApplyFormState = {
@@ -16,10 +20,6 @@ export type ApplyFormState = {
 const IMAGE_KEYS = ["front", "back", "side"] as const;
 const BUCKET = APPLICATION_IMAGES_BUCKET;
 const MAX_BYTES = 5 * 1024 * 1024;
-
-function readString(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
-}
 
 function isImageFile(file: File) {
   return file.type.startsWith("image/") || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
@@ -53,9 +53,9 @@ export async function applyToOfferAction(
   formData: FormData,
 ): Promise<ApplyFormState> {
   const { user, profile } = await requireCustomer();
-  const offerId = readString(formData, "offer_id");
-  const slotId = readString(formData, "slot_id");
-  const notes = readString(formData, "notes");
+  const offerId = readId(formData, "offer_id");
+  const slotId = readId(formData, "slot_id");
+  const notes = readText(formData, "notes", TEXT_LIMITS.notes);
 
   if (!offerId || !slotId) {
     return { error: "Angebot oder Slot fehlt." };
@@ -65,7 +65,23 @@ export async function applyToOfferAction(
   const slot = await loadAvailableSlot(slotId, offerId);
 
   if (!offer || !slot) {
-    return { error: "Dieses Angebot oder dieser Slot ist nicht mehr verfügbar." };
+    return { error: "Dieser Slot ist ausgebucht oder nicht mehr verfügbar." };
+  }
+
+  const blocked = await loadBlockedSalons(user.id);
+  if (isOfferBlocked(offer, blocked)) {
+    return { error: "Dieser Salon nimmt aktuell keine Bewerbungen von dir an." };
+  }
+
+  const loyalty = await loadCustomerLoyalty(createAdminClient(), user.id);
+  if (
+    !canSeeVipOffer({
+      vipEarlyAccess: offer.vip_early_access,
+      createdAt: offer.created_at,
+      level: loyalty.level,
+    })
+  ) {
+    return { error: "VIP Early Access: dieses Angebot ist für dein Level noch nicht sichtbar." };
   }
 
   const files = IMAGE_KEYS.map((key) => formData.get(key));
@@ -103,6 +119,11 @@ export async function applyToOfferAction(
     }
 
     uploaded_images.push(path);
+  }
+
+  const stillOpen = await loadAvailableSlot(slotId, offerId);
+  if (!stillOpen) {
+    return { error: "Dieser Slot wurde soeben ausgebucht. Bitte wähle eine andere Uhrzeit." };
   }
 
   const { data: created, error: insertError } = await admin
@@ -150,5 +171,5 @@ export async function applyToOfferAction(
 
   revalidatePath("/business/dashboard");
   revalidatePath("/dashboard");
-  redirect(`/dashboard?applied=1`);
+  redirect(`/dashboard/applications?applied=1`);
 }

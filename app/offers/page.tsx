@@ -6,9 +6,9 @@ import { getOptionalProfile } from "@/lib/auth/require-customer";
 export default async function OffersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stadt?: string }>;
+  searchParams: Promise<{ q?: string; stadt?: string }>;
 }) {
-  const { stadt } = await searchParams;
+  const { q, stadt } = await searchParams;
   const profile = await getOptionalProfile();
 
   if (profile?.role === "business") {
@@ -16,12 +16,13 @@ export default async function OffersPage({
   }
 
   if (profile?.role === "customer" || profile?.role === "admin") {
-    redirect(stadt ? `/dashboard?stadt=${encodeURIComponent(stadt)}` : "/dashboard");
+    const query = q || stadt;
+    redirect(query ? `/dashboard?q=${encodeURIComponent(query)}` : "/dashboard");
   }
 
   return (
     <CustomerShell title="Browse" signedIn={false}>
-      <BrowseOffers city={stadt} basePath="/offers" />
+      <BrowseOffers query={q || stadt} basePath="/offers" />
     </CustomerShell>
   );
 }

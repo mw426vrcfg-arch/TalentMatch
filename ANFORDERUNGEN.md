@@ -100,7 +100,7 @@ Kapitel 6, 9 und 10. Währung: CHF. Full Prepayment.
 Kapitel 4.6–4.7 und Endpoints `POST /bookings/complete`, `POST /bookings/no-show`.
 
 - [ ] Booking in beiden Dashboards anzeigen (Termin, Status, Betrag)
-- [ ] Salon markiert Termin als `completed` → Payout freigeben
+- [x] Salon markiert Termin als `completed` → Payout freigeben
 - [x] Salon markiert `no_show` → kein Refund, Strike für den Kunden
 - [ ] Salon-Cancel: Slot wieder öffnen, Kunde refunden
 - [ ] Kunde zahlt nicht rechtzeitig: Application verfällt, Slot frei
@@ -111,8 +111,8 @@ Kapitel 4.6–4.7 und Endpoints `POST /bookings/complete`, `POST /bookings/no-sh
 
 Kapitel 3.8, 3.9, 4.8 und Tabellen `reviews` / `strikes`.
 
-- [ ] Nach `completed`: Review-Aufforderung an Kunde und Salon
-- [ ] Bewertung 1–5 + Kommentar, je Booking und Reviewer einmal
+- [x] Nach `completed`: Review-Aufforderung an Kunde und Salon
+- [x] Bewertung 1–5 + Kommentar, je Booking und Reviewer einmal (`ratings`)
 - [x] Strike bei No-Show, kurzfristiger Absage, falschen Bildern
 - [x] 1 Strike = Warnung, 2 = 14 Tage Sperre, 3 = permanenter Ban (Login gesperrt)
 - [x] Reliability-Hinweis für den Salon in der Bewerbungsliste (Anzahl aktiver Strikes)
