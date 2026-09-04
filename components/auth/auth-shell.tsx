@@ -1,13 +1,20 @@
+"use client";
+
 import Link from "next/link";
+import { type ReactNode } from "react";
+import { useT } from "@/components/i18n/i18n-provider";
+import { type MessageKey } from "@/lib/i18n/messages";
 
 type AuthShellProps = {
-  title: string;
-  subtitle: string;
-  children: React.ReactNode;
-  footer: React.ReactNode;
+  titleKey: MessageKey;
+  subtitleKey: MessageKey;
+  children: ReactNode;
+  footer: ReactNode;
 };
 
-export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
+export function AuthShell({ titleKey, subtitleKey, children, footer }: AuthShellProps) {
+  const t = useT();
+
   return (
     <main className="min-h-screen lg:grid lg:grid-cols-2">
       <section className="relative hidden overflow-hidden bg-zinc-950 lg:flex lg:flex-col lg:justify-between lg:p-12">
@@ -16,16 +23,11 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
           TalentMatch
         </Link>
         <div className="relative max-w-md">
-          <p className="ui-kicker text-zinc-400">Beauty Marketplace</p>
-          <h2 className="mt-4 font-serif text-4xl leading-tight text-zinc-50">
-            Freie Slots. Passende Talente. Verbindliche Termine.
-          </h2>
-          <p className="mt-5 text-sm leading-relaxed text-zinc-400">
-            Kunden bewerben sich mit Fotos. Salons entscheiden. Reviews und Strikes halten die
-            Qualität hoch.
-          </p>
+          <p className="ui-kicker text-zinc-400">{t("auth.marketplaceKicker")}</p>
+          <h2 className="mt-4 font-serif text-4xl leading-tight text-zinc-50">{t("auth.marketplaceTitle")}</h2>
+          <p className="mt-5 text-sm leading-relaxed text-zinc-400">{t("auth.marketplaceBody")}</p>
         </div>
-        <p className="relative text-xs text-zinc-500">Zürich · Beauty · Matching</p>
+        <p className="relative text-xs text-zinc-500">{t("auth.marketplaceFooter")}</p>
       </section>
 
       <section className="flex items-center justify-center px-4 py-12 sm:px-6">
@@ -33,8 +35,8 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
           <Link href="/" className="mb-10 block font-serif text-3xl text-ink lg:hidden">
             TalentMatch
           </Link>
-          <h1 className="font-serif text-4xl text-ink">{title}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-ink-soft">{subtitle}</p>
+          <h1 className="font-serif text-4xl text-ink">{t(titleKey)}</h1>
+          <p className="mt-2 text-sm leading-relaxed text-ink-soft">{t(subtitleKey)}</p>
           <div className="mt-8">{children}</div>
           <p className="mt-8 text-sm text-ink-soft">{footer}</p>
         </div>

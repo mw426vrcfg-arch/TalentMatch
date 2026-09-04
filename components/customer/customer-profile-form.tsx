@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { HairProfileFields } from "@/components/hair/hair-profile-fields";
 import { TreatmentPassFields } from "@/components/customer/treatment-pass-fields";
+import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import {
   updateCustomerProfileAction,
   type CustomerProfileFormState,
@@ -16,6 +17,8 @@ export function CustomerProfileForm({
 }: {
   profile: CustomerProfile | null;
 }) {
+  const t = useT();
+  const localize = useLocalize();
   const [state, formAction, pending] = useActionState(
     updateCustomerProfileAction,
     initialState,
@@ -23,25 +26,25 @@ export function CustomerProfileForm({
 
   return (
     <form action={formAction} className="space-y-5">
-      {state.error ? <p className="ui-alert-error">{state.error}</p> : null}
+      {state.error ? <p className="ui-alert-error">{localize(state.error)}</p> : null}
 
       <div className="flex items-center gap-4">
         <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/70 shadow-[0_8px_24px_rgba(15,15,20,0.05)] backdrop-blur-md">
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
           ) : (
-            <span className="ui-kicker">Foto</span>
+            <span className="ui-kicker">{t("profile.photo")}</span>
           )}
         </div>
         <label className="block min-w-0 flex-1">
-          <span className="mb-1.5 block text-sm text-ink-soft">Profilbild</span>
+          <span className="mb-1.5 block text-sm text-ink-soft">{t("profile.avatar")}</span>
           <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" className="ui-file" />
-          <span className="mt-1 block text-xs text-ink-soft">JPG, PNG oder WebP, max. 2 MB</span>
+          <span className="mt-1 block text-xs text-ink-soft">{t("profile.avatarHint")}</span>
         </label>
       </div>
 
       <label className="block">
-        <span className="mb-1.5 block text-sm text-ink-soft">Voller Name</span>
+        <span className="mb-1.5 block text-sm text-ink-soft">{t("profile.fullName")}</span>
         <input
           required
           name="full_name"
@@ -51,12 +54,12 @@ export function CustomerProfileForm({
       </label>
 
       <label className="block">
-        <span className="mb-1.5 block text-sm text-ink-soft">Beschreibung (Bio)</span>
+        <span className="mb-1.5 block text-sm text-ink-soft">{t("profile.bio")}</span>
         <textarea
           name="bio"
           rows={4}
           defaultValue={profile?.bio ?? ""}
-          placeholder="Kurz zu dir, Haarhistorie, Verfügbarkeit…"
+          placeholder={t("profile.bioPlaceholder")}
           className="ui-input resize-y"
         />
       </label>
@@ -75,7 +78,7 @@ export function CustomerProfileForm({
       />
 
       <button type="submit" disabled={pending} className="ui-btn-primary w-full sm:w-auto">
-        {pending ? "Wird gespeichert…" : "Profil speichern"}
+        {pending ? t("actions.saving") : t("actions.saveProfile")}
       </button>
     </form>
   );

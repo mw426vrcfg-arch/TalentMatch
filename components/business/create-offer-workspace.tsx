@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CreateOfferForm } from "@/components/business/create-offer-form";
 import { OfferEditorOverlay } from "@/components/business/offer-editor-overlay";
+import { useT } from "@/components/i18n/i18n-provider";
 import { hapticTap } from "@/lib/ui/haptic";
 
 export function CreateOfferWorkspace({
@@ -16,6 +17,7 @@ export function CreateOfferWorkspace({
   urgentLimit?: number;
   urgentUsed?: number;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   return (
@@ -28,14 +30,16 @@ export function CreateOfferWorkspace({
         }}
         className="ui-btn-primary min-h-14 w-full px-8 text-base sm:w-auto"
       >
-        + Neues Angebot erstellen
+        {t("create.ctaCreate")}
       </button>
 
       {open ? (
         <OfferEditorOverlay
-          kicker="Neues Angebot"
-          title="Deal veröffentlichen"
-          subtitle={`Location kommt von deinem Salonprofil${location ? ` (${location})` : ""}.`}
+          kicker={t("create.newOffer")}
+          title={t("create.publishDeal")}
+          subtitle={t("create.locationFromProfile", {
+            location: location ? t("create.locationParen", { location }) : "",
+          })}
           onClose={() => setOpen(false)}
         >
           <CreateOfferForm

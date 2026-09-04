@@ -1,9 +1,16 @@
 import { parseSlotIdFromNotes, parseSlotStartFromNotes } from "@/lib/applications/slot-from-notes";
 import { isLateCancellation } from "@/lib/bookings/cancel-window";
+import { insertChatMessage } from "@/lib/messages/store";
 import { createNotification, type NotificationType } from "@/lib/notifications/create";
 import { refreshOfferAvailability } from "@/lib/offers/availability";
 import { banCustomerLogin, getStrikeRestriction } from "@/lib/strikes/restriction";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+const CANCEL_REASON_LABEL: Record<string, string> = {
+  illness: "Krankheit",
+  conflict: "Terminkonflikt",
+  other: "Sonstiges",
+};
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -88,11 +95,28 @@ async function addLateCancelStrike(admin: Admin, customerId: string, application
   }
 }
 
+function formatCancelChat(input: { role: "customer" | "salon"; reason?: string; note?: string; late?: boolean }) {
+  const reason = CANCEL_REASON_LABEL[input.reason ?? ""] || input.reason || "Sonstiges";
+  const lines = [
+    input.role === "salon" ? "Stornierung durch den Salon" : "Stornierung durch das Modell",
+    `Grund: ${reason}`,
+  ];
+  if (input.note?.trim()) {
+    lines.push(`Nachricht: ${input.note.trim()}`);
+  }
+  if (input.late) {
+    lines.push("Hinweis: Stornierung weniger als 24 Stunden vor dem Termin (+1 Strike).");
+  }
+  return lines.join("\n");
+}
+
 export async function cancelAppointment(input: {
   actorId: string;
   role: "customer" | "salon";
   applicationId: string;
   salonBusinessId?: string | null;
+  reason?: string;
+  note?: string;
 }) {
   const admin = createAdminClient();
   const { data: application, error } = await admin
@@ -161,13 +185,30 @@ export async function cancelAppointment(input: {
 
   const preferred =
     input.role === "customer" ? "cancelled_by_customer" : "cancelled_by_salon";
+  const late = input.role === "customer" && isLateCancellation(startIso);
+
+  try {
+    await insertChatMessage(admin, {
+      applicationId: application.id as string,
+      bookingId: booking?.id ? String(booking.id) : null,
+      senderId: input.actorId,
+      body: formatCancelChat({
+        role: input.role,
+        reason: input.reason,
+        note: input.note,
+        late,
+      }),
+    });
+  } catch (chatError) {
+    console.error("Stornierungs-Chat:", chatError);
+  }
+
   await updateApplicationStatus(admin, application.id as string, preferred);
   await closeBooking(admin, booking?.id ? String(booking.id) : null, slotId);
   await releaseSlot(admin, slotId);
   await refreshOfferAvailability(admin, application.offer_id as string);
 
   const service = String(offer.title ?? "Termin");
-  const late = input.role === "customer" && isLateCancellation(startIso);
 
   if (late) {
     await addLateCancelStrike(

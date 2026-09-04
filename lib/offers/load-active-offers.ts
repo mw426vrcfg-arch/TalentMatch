@@ -4,6 +4,8 @@ import { loadSalonAverages } from "@/lib/ratings/store";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { OFFER_STATUS_EXPIRED } from "@/lib/offers/availability";
 import { partnerSalonLabel, regionLabel } from "@/lib/offers/anonymize";
+import { isUrgentFlag } from "@/lib/offers/urgent-flag";
+import { resolveBusinessImageUrl } from "@/lib/business/images";
 
 export type BrowseSlot = {
   id: string;
@@ -71,8 +73,14 @@ function asProfile(value: OfferQueryRow["business_profiles"]): ProfileFields | n
 const FULL_OFFER_SELECT =
   "id, title, description, requirements, normal_price, discount_price, duration_minutes, is_urgent, vip_early_access, status, available_slots, created_at, business_id, image_url, wanted_hair_structure, wanted_hair_length, wanted_hair_chemical, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
 const BASE_OFFER_SELECT =
-  "id, title, description, requirements, normal_price, discount_price, duration_minutes, status, created_at, business_id, image_url, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
+  "id, title, description, requirements, normal_price, discount_price, duration_minutes, is_urgent, vip_early_access, status, available_slots, created_at, business_id, image_url, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
 const MIN_OFFER_SELECT =
+  "id, title, description, requirements, normal_price, discount_price, duration_minutes, is_urgent, status, created_at, business_id, image_url, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
+const IMAGE_OFFER_SELECT =
+  "id, title, description, requirements, normal_price, discount_price, duration_minutes, status, available_slots, created_at, business_id, image_url, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
+const IMAGE_MIN_OFFER_SELECT =
+  "id, title, description, requirements, normal_price, discount_price, duration_minutes, status, created_at, business_id, image_url, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
+const LEGACY_OFFER_SELECT =
   "id, title, description, requirements, normal_price, discount_price, duration_minutes, status, created_at, business_id, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
 
 async function fetchOfferRows(
@@ -93,13 +101,64 @@ async function fetchOfferRows(
 
   const full = await run(FULL_OFFER_SELECT);
   const mid = full.error ? await run(BASE_OFFER_SELECT) : full;
-  const result = mid.error ? await run(MIN_OFFER_SELECT) : mid;
+  const withUrgent = mid.error ? await run(MIN_OFFER_SELECT) : mid;
+  const withSlots = withUrgent.error ? await run(IMAGE_OFFER_SELECT) : withUrgent;
+  const withImage = withSlots.error ? await run(IMAGE_MIN_OFFER_SELECT) : withSlots;
+  const result = withImage.error ? await run(LEGACY_OFFER_SELECT) : withImage;
 
   if (result.error) {
     throw new Error(result.error.message);
   }
 
-  return (result.data ?? []) as unknown as OfferQueryRow[];
+  const rows = (result.data ?? []) as unknown as OfferQueryRow[];
+  return hydrateOfferImages(admin, await hydrateUrgentFlags(admin, rows));
+}
+
+async function hydrateUrgentFlags(admin: ReturnType<typeof createAdminClient>, rows: OfferQueryRow[]) {
+  if (rows.length === 0 || rows.some((row) => "is_urgent" in row && row.is_urgent !== undefined)) {
+    return rows;
+  }
+
+  const ids = rows.map((row) => row.id);
+  const flagged = await admin.from("offers").select("id, is_urgent").in("id", ids);
+  if (flagged.error || !flagged.data) {
+    return rows;
+  }
+
+  const byId = new Map(
+    flagged.data.map((row) => [String((row as { id: string }).id), isUrgentFlag((row as { is_urgent?: unknown }).is_urgent)]),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    is_urgent: byId.get(row.id) ?? isUrgentFlag(row.is_urgent),
+  }));
+}
+
+async function hydrateOfferImages(admin: ReturnType<typeof createAdminClient>, rows: OfferQueryRow[]) {
+  if (rows.length === 0) {
+    return rows;
+  }
+
+  let withImages = rows;
+  if (!rows.some((row) => "image_url" in row)) {
+    const ids = rows.map((row) => row.id);
+    const extra = await admin.from("offers").select("id, image_url").in("id", ids);
+    if (!extra.error && extra.data) {
+      const byId = new Map(
+        extra.data.map((row) => [String((row as { id: string }).id), (row as { image_url?: string | null }).image_url ?? null]),
+      );
+      withImages = rows.map((row) => ({
+        ...row,
+        image_url: byId.get(row.id) ?? row.image_url ?? null,
+      }));
+    }
+  }
+
+  return withImages.map((row) => ({
+    ...row,
+    image_url: resolveBusinessImageUrl(row.image_url) ?? row.image_url ?? null,
+  }));
 }
 
 async function toBrowseOffers(
@@ -112,15 +171,7 @@ async function toBrowseOffers(
   const now = Date.now();
 
   const mapped = rows
-    .filter((row) => {
-      if (!hideFullyBooked) {
-        return true;
-      }
-      if (row.status === "inactive") {
-        return false;
-      }
-      return true;
-    })
+    .filter((row) => row.status !== OFFER_STATUS_EXPIRED && row.status !== "inactive")
     .map((row) => {
     const profile = asProfile(row.business_profiles);
     const slots = (row.offer_slots ?? [])
@@ -155,11 +206,11 @@ async function toBrowseOffers(
       business_id: businessId,
       salon_rating_average: null as number | null,
       salon_rating_count: 0,
-      is_urgent: Boolean(row.is_urgent),
+      is_urgent: isUrgentFlag(row.is_urgent),
       vip_early_access: Boolean(row.vip_early_access),
       created_at: row.created_at ? String(row.created_at) : null,
       available_slots: typeof row.available_slots === "number" ? row.available_slots : unbooked,
-      image_url: row.image_url ? String(row.image_url) : null,
+      image_url: resolveBusinessImageUrl(row.image_url ? String(row.image_url) : null),
       hair: readHairProfile(row),
       slots,
     };
@@ -204,7 +255,7 @@ export async function loadActiveOffers(): Promise<BrowseOffer[]> {
     requireSlots: true,
     hideFullyBooked: true,
   });
-  return mapped.sort((a, b) => Number(b.is_urgent) - Number(a.is_urgent));
+  return mapped.sort((a, b) => Number(isUrgentFlag(b.is_urgent)) - Number(isUrgentFlag(a.is_urgent)));
 }
 
 export async function loadOffersByIds(ids: string[]): Promise<BrowseOffer[]> {

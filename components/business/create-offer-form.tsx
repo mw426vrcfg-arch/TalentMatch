@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import { HairProfileFields } from "@/components/hair/hair-profile-fields";
 import { SmartPricingWidget } from "@/components/business/smart-pricing-widget";
 import { createOfferAction, updateOfferAction, type OfferFormState } from "@/app/business/actions";
+import { CoverImage } from "@/components/ui/cover-image";
+import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { formatSlotClock, formatSlotDay, groupSlotsByDay } from "@/lib/offers/format";
 import { combineLocalDateTime } from "@/lib/offers/slot-schedule";
 import { type SalonOfferListItem } from "@/lib/offers/salon-list";
@@ -43,6 +45,8 @@ export function CreateOfferForm({
   urgentLimit?: number;
   urgentUsed?: number;
 }) {
+  const t = useT();
+  const localize = useLocalize();
   const isEdit = Boolean(offer?.id);
   const [days, setDays] = useState<DayGroup[]>([newDay()]);
   const [normalPrice, setNormalPrice] = useState(
@@ -74,38 +78,37 @@ export function CreateOfferForm({
 
   return (
     <form action={formAction} className="space-y-5">
-      {state.error && <p className="ui-alert-error">{state.error}</p>}
+      {state.error && <p className="ui-alert-error">{localize(state.error)}</p>}
       {offer?.id ? <input type="hidden" name="offer_id" value={offer.id} /> : null}
 
       <label className="block">
-        <span className="mb-1.5 block text-sm text-ink-soft">Service Title</span>
+        <span className="mb-1.5 block text-sm text-ink-soft">{t("create.serviceTitle")}</span>
         <input
           required
           name="title"
           defaultValue={offer?.title ?? ""}
-          placeholder="Balayage Training Model"
+          placeholder={t("create.titlePlaceholder")}
           className="ui-input"
         />
       </label>
 
       <label className="block">
-        <span className="mb-1.5 block text-sm text-ink-soft">Description</span>
+        <span className="mb-1.5 block text-sm text-ink-soft">{t("create.description")}</span>
         <textarea
           required
           name="description"
           rows={4}
           defaultValue={offer?.description ?? ""}
-          placeholder="Balayage durch Junior Stylist unter Supervision."
+          placeholder={t("create.descriptionPlaceholder")}
           className="ui-input resize-y"
         />
       </label>
 
       <label className="block">
-        <span className="mb-1.5 block text-sm text-ink-soft">Angebotsbild</span>
+        <span className="mb-1.5 block text-sm text-ink-soft">{t("create.offerImage")}</span>
         {offer?.image_url ? (
-          <img
+          <CoverImage
             src={offer.image_url}
-            alt=""
             className="mb-3 aspect-[4/3] w-full rounded-2xl object-cover"
           />
         ) : null}
@@ -116,16 +119,14 @@ export function CreateOfferForm({
           className="ui-file"
         />
         <span className="mt-1.5 block text-xs text-ink-soft">
-          {offer?.image_url
-            ? "Neues Bild ersetzt das aktuelle Vorschaubild in der Datenbank."
-            : "Optional. JPEG, PNG oder WebP, max. 2 MB — erscheint vollflächig auf der Kunden-Card."}
+          {offer?.image_url ? t("create.imageReplace") : t("create.imageHint")}
         </span>
       </label>
 
       <div className="space-y-3">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-1.5 block text-sm text-ink-soft">Normal Price (CHF)</span>
+          <span className="mb-1.5 block text-sm text-ink-soft">{t("create.normalPrice")}</span>
           <input
             required
             name="normal_price"
@@ -139,7 +140,7 @@ export function CreateOfferForm({
           />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-sm text-ink-soft">Discount Price (CHF)</span>
+          <span className="mb-1.5 block text-sm text-ink-soft">{t("create.discountPrice")}</span>
           <input
             required
             name="discount_price"
@@ -157,7 +158,7 @@ export function CreateOfferForm({
       </div>
 
       <label className="block">
-        <span className="mb-1.5 block text-sm text-ink-soft">Duration (Minuten)</span>
+        <span className="mb-1.5 block text-sm text-ink-soft">{t("create.duration")}</span>
         <input
           required
           name="duration_minutes"
@@ -186,11 +187,11 @@ export function CreateOfferForm({
           className="mt-1 h-4 w-4 accent-zinc-900 disabled:cursor-not-allowed"
         />
         <span>
-          <span className="block text-sm font-medium text-ink">🚨 Last-Minute / Dringend</span>
+          <span className="block text-sm font-medium text-ink">{t("create.urgentToggle")}</span>
           <span className="mt-1 block text-xs leading-relaxed text-ink-soft">
             {urgentLimitReached && !offer?.is_urgent
-              ? `Monatliches Limit für Last-Minute-Deals (${urgentUsed}/${urgentLimit}) erreicht`
-              : "Urgent Match: der Deal wird bei Kundinnen ganz oben angepinnt und besonders hervorgehoben."}
+              ? t("create.urgentLimit", { used: urgentUsed, limit: urgentLimit })
+              : t("create.urgentHint")}
           </span>
         </span>
       </label>
@@ -204,16 +205,16 @@ export function CreateOfferForm({
           className="mt-1 h-4 w-4 accent-zinc-900"
         />
         <span>
-          <span className="block text-sm font-medium text-ink">VIP Early Access</span>
+          <span className="block text-sm font-medium text-ink">{t("create.vipEarly")}</span>
           <span className="mt-1 block text-xs leading-relaxed text-ink-soft">
-            Silber- und Gold-Mitglieder sehen den Deal sofort. Bronze erst nach 30 Minuten — starker Anreiz, Punkte zu sammeln.
+            {t("create.vipEarlyHint")}
           </span>
         </span>
       </label>
 
       {isEdit && existingSlots.length > 0 ? (
         <div>
-          <p className="mb-2 text-sm text-ink-soft">Bestehende Slots</p>
+          <p className="mb-2 text-sm text-ink-soft">{t("create.existingSlots")}</p>
           <div className="space-y-3 rounded-2xl border border-neutral-200/60 bg-white/50 p-4 backdrop-blur-sm">
             {groupSlotsByDay(existingSlots).map((group) => (
               <div key={group.key}>
@@ -225,7 +226,7 @@ export function CreateOfferForm({
                       className="rounded-full border border-neutral-200/70 bg-white/70 px-3 py-1 text-xs text-neutral-700"
                     >
                       {formatSlotClock(slot.start_time)}
-                      {slot.is_booked ? " · gebucht" : ""}
+                      {slot.is_booked ? ` · ${t("common.booked")}` : ""}
                     </li>
                   ))}
                 </ul>
@@ -238,14 +239,14 @@ export function CreateOfferForm({
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">
           <span className="text-sm text-ink-soft">
-            {isEdit ? "Neue Slots hinzufügen" : "Available Slots"}
+            {isEdit ? t("create.addSlots") : t("create.slotsLabel")}
           </span>
           <button
             type="button"
             onClick={() => setDays((current) => [...current, newDay()])}
             className="ui-btn-secondary px-3 py-1 text-xs"
           >
-            Weiteren Tag hinzufügen
+            {t("create.addDay")}
           </button>
         </div>
 
@@ -255,7 +256,7 @@ export function CreateOfferForm({
               <div className="mb-3 flex items-center justify-between gap-3">
                 <label className="block min-w-0 flex-1">
                   <span className="mb-1.5 block text-sm text-ink-soft">
-                    Tag {dayIndex + 1}
+                    {t("create.dayN", { n: dayIndex + 1 })}
                   </span>
                   <input
                     required={!isEdit}
@@ -263,7 +264,7 @@ export function CreateOfferForm({
                     value={day.date}
                     onChange={(event) => updateDay(day.id, event.target.value)}
                     className="ui-input"
-                    aria-label={`Datum für Tag ${dayIndex + 1}`}
+                    aria-label={t("create.dateForDay", { n: dayIndex + 1 })}
                   />
                 </label>
                 {days.length > 1 ? (
@@ -272,7 +273,7 @@ export function CreateOfferForm({
                     onClick={() => setDays((current) => current.filter((row) => row.id !== day.id))}
                     className="ui-btn-danger mt-6 px-3 text-xs"
                   >
-                    Tag entfernen
+                    {t("create.removeDay")}
                   </button>
                 ) : null}
               </div>
@@ -288,7 +289,7 @@ export function CreateOfferForm({
                         value={time.value}
                         onChange={(event) => updateTime(day.id, time.id, event.target.value)}
                         className="ui-input"
-                        aria-label={`Uhrzeit ${timeIndex + 1} an Tag ${dayIndex + 1}`}
+                        aria-label={t("create.timeForDay", { n: timeIndex + 1, day: dayIndex + 1 })}
                       />
                       {iso ? <input type="hidden" name="slots" value={iso} /> : null}
                       {day.times.length > 1 ? (
@@ -308,7 +309,7 @@ export function CreateOfferForm({
                           }
                           className="ui-btn-danger px-3 text-xs"
                         >
-                          Entfernen
+                          {t("actions.remove")}
                         </button>
                       ) : null}
                     </div>
@@ -327,15 +328,13 @@ export function CreateOfferForm({
                 }
                 className="ui-btn-secondary mt-3 px-3 py-1 text-xs"
               >
-                Uhrzeit hinzufügen
+                {t("create.addTime")}
               </button>
             </div>
           ))}
         </div>
         <p className="mt-2 text-xs text-ink-soft">
-          {isEdit
-            ? "Neue Uhrzeiten werden als zusätzliche Zeilen in offer_slots gespeichert. Bestehende Slots bleiben."
-            : "An einem Tag mehrere Uhrzeiten setzen — jede Uhrzeit ist ein eigener Slot. Das Angebot bleibt für Modelle sichtbar, bis alle Slots vergeben sind."}
+          {isEdit ? t("create.extraSlotsNote") : t("create.slotsHint")}
         </p>
       </div>
 
@@ -349,7 +348,7 @@ export function CreateOfferForm({
             }}
             className="ui-btn-secondary w-full sm:w-auto"
           >
-            Abbrechen
+            {t("common.cancel")}
           </button>
         ) : null}
         <button
@@ -359,12 +358,12 @@ export function CreateOfferForm({
           className="ui-btn-primary w-full sm:w-auto"
         >
           {pending
-            ? "Wird gespeichert…"
+            ? t("create.saving")
             : isEdit
-              ? "Änderungen speichern"
+              ? t("create.saveChanges")
               : onCancel
-                ? "Speichern"
-                : "Veröffentlichen"}
+                ? t("actions.save")
+                : t("actions.publish")}
         </button>
       </div>
     </form>

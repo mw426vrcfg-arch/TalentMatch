@@ -1,12 +1,15 @@
+import { intlLocale, type Locale } from "@/lib/i18n/config";
 import { type BrowseOffer } from "@/lib/offers/load-active-offers";
+import { isUrgentFlag } from "@/lib/offers/urgent-flag";
+import type { InspirationTile } from "@/lib/inspiration/types";
 
 export type RankedBrowseOffer = BrowseOffer & { relevance: number };
 
 const MATCH_THRESHOLD = 0.62;
 
-function fold(value: string) {
+function fold(value: string, locale: string = "de-CH") {
   return value
-    .toLocaleLowerCase("de-CH")
+    .toLocaleLowerCase(locale)
     .replace(/ß/g, "ss")
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
@@ -105,19 +108,24 @@ function fieldScore(token: string, title: string, description: string, region: s
   return Math.max(titleScore * 1, regionScore * 0.92, descriptionScore * 0.78);
 }
 
-export function searchBrowseOffers(offers: BrowseOffer[], query: string): RankedBrowseOffer[] {
-  const folded = fold(query);
+export function searchBrowseOffers(
+  offers: BrowseOffer[],
+  query: string,
+  locale: Locale = "de",
+): RankedBrowseOffer[] {
+  const intl = intlLocale(locale);
+  const folded = fold(query, intl);
   if (!folded) {
-    return offers.map((offer) => ({ ...offer, relevance: offer.is_urgent ? 1 : 0.5 }));
+    return pinUrgentOffers(offers.map((offer) => ({ ...offer, relevance: isUrgentFlag(offer.is_urgent) ? 1 : 0.5 })));
   }
 
   const tokens = folded.split(" ").filter(Boolean);
 
   return offers
     .map((offer) => {
-      const title = fold(offer.title);
-      const description = fold(offer.description ?? "");
-      const region = fold(`${offer.region} ${offer.city}`);
+      const title = fold(offer.title, intl);
+      const description = fold(offer.description ?? "", intl);
+      const region = fold(`${offer.region} ${offer.city} ${offer.partner_name}`, intl);
       const score =
         tokens.reduce((sum, token) => sum + fieldScore(token, title, description, region), 0) /
         tokens.length;
@@ -126,10 +134,59 @@ export function searchBrowseOffers(offers: BrowseOffer[], query: string): Ranked
     })
     .filter((offer) => offer.relevance >= MATCH_THRESHOLD)
     .sort((left, right) => {
-      const relevanceDelta = right.relevance - left.relevance;
-      if (Math.abs(relevanceDelta) > 0.02) {
-        return relevanceDelta;
+      const urgentDelta = Number(isUrgentFlag(right.is_urgent)) - Number(isUrgentFlag(left.is_urgent));
+      if (urgentDelta !== 0) {
+        return urgentDelta;
       }
-      return Number(right.is_urgent) - Number(left.is_urgent);
+      return right.relevance - left.relevance;
     });
+}
+
+export function searchInspirationTiles(
+  tiles: InspirationTile[],
+  query: string,
+  locale: Locale,
+  localize: (text: string) => string,
+): InspirationTile[] {
+  const intl = intlLocale(locale);
+  const folded = fold(query, intl);
+  if (!folded) {
+    return pinUrgentTiles(tiles);
+  }
+
+  const tokens = folded.split(" ").filter(Boolean);
+
+  return tiles
+    .map((tile) => {
+      const title = fold(tile.offer?.title ?? "", intl);
+      const description = fold(tile.offer?.description ?? "", intl);
+      const region = fold(
+        `${tile.region} ${localize(tile.region)} ${tile.offer?.city ?? ""} ${tile.offer?.region ?? ""} ${tile.partner_name}`,
+        intl,
+      );
+      const score =
+        tokens.reduce((sum, token) => sum + fieldScore(token, title, description, region), 0) /
+        tokens.length;
+      return { tile, score };
+    })
+    .filter((entry) => entry.score >= MATCH_THRESHOLD)
+    .sort((left, right) => {
+      const urgentDelta =
+        Number(isUrgentFlag(right.tile.offer?.is_urgent)) - Number(isUrgentFlag(left.tile.offer?.is_urgent));
+      if (urgentDelta !== 0) {
+        return urgentDelta;
+      }
+      return right.score - left.score;
+    })
+    .map((entry) => entry.tile);
+}
+
+export function pinUrgentTiles(tiles: InspirationTile[]): InspirationTile[] {
+  return [...tiles].sort(
+    (left, right) => Number(isUrgentFlag(right.offer?.is_urgent)) - Number(isUrgentFlag(left.offer?.is_urgent)),
+  );
+}
+
+export function pinUrgentOffers<T extends { is_urgent?: boolean | null }>(items: T[]): T[] {
+  return [...items].sort((left, right) => Number(isUrgentFlag(right.is_urgent)) - Number(isUrgentFlag(left.is_urgent)));
 }

@@ -1,10 +1,12 @@
 import { BrowseSearchBoard } from "@/components/offers/browse-search";
+import { T } from "@/components/i18n/t";
 import { loadFavoriteOfferIds } from "@/lib/favorites/store";
 import { isPerfectHairMatch } from "@/lib/hair/criteria";
 import { loadCustomerProfile } from "@/lib/customer/profile-store";
 import { filterBlockedOffers, loadBlockedSalons, NO_BLOCKED_SALONS } from "@/lib/blacklist/store";
 import { loadCustomerLoyalty } from "@/lib/loyalty/store";
 import { filterOffersForMember, loadActiveOffers } from "@/lib/offers/load-active-offers";
+import { scheduleOfferExpiry } from "@/lib/offers/expire";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function BrowseOffers({
@@ -16,6 +18,7 @@ export async function BrowseOffers({
   basePath: string;
   userId?: string | null;
 }) {
+  scheduleOfferExpiry();
   const admin = createAdminClient();
   const allOffers = await loadActiveOffers();
   const loyalty = userId ? await loadCustomerLoyalty(admin, userId) : { points: 0, level: "Bronze" as const };
@@ -42,12 +45,14 @@ export async function BrowseOffers({
   return (
     <>
       <div className="max-w-2xl">
-        <p className="ui-kicker">Entdecken</p>
+        <p className="ui-kicker">
+          <T k="browse.discover" />
+        </p>
         <h1 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">
-          Starke Deals. Freie Slots. In deiner Region.
+          <T k="browse.title" />
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-          Suche nach Service, Beschreibung oder Region — auch mit kleinen Tippfehlern.
+          <T k="browse.searchIntro" />
         </p>
       </div>
 

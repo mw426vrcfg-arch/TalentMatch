@@ -65,6 +65,15 @@
   }
 }
 
+@keyframes overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @keyframes sheet-in {
   from {
     opacity: 0;
@@ -76,12 +85,42 @@
   }
 }
 
-@keyframes overlay-out {
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes toast-out {
   from {
     opacity: 1;
+    transform: none;
   }
   to {
     opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+}
+
+@keyframes offer-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -93,6 +132,21 @@
   to {
     opacity: 0;
     transform: translateY(22px) scale(0.98);
+  }
+}
+
+@keyframes focus-glow {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(29, 29, 31, 0.2),
+      0 1px 0 rgba(255, 255, 255, 0.88) inset,
+      0 18px 50px rgba(15, 15, 20, 0.08);
+  }
+  100% {
+    box-shadow:
+      0 0 0 12px rgba(29, 29, 31, 0),
+      0 1px 0 rgba(255, 255, 255, 0.88) inset,
+      0 18px 50px rgba(15, 15, 20, 0.08);
   }
 }
 
@@ -123,6 +177,40 @@
   50% {
     opacity: 0.72;
     transform: scale(1.04);
+  }
+}
+
+@keyframes ui-typing-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ui-typing-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0) scale(0.92);
+    opacity: 0.38;
+  }
+  30% {
+    transform: translateY(-3.5px) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ui-typing-dot-fade {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
@@ -215,6 +303,13 @@ a.ui-icon-btn:active {
     transform: translateY(-4px) scale(1.015);
   }
 
+  .ui-focus-card {
+    animation:
+      app-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) both,
+      focus-glow 1.4s ease-out 2;
+    border-color: rgba(29, 29, 31, 0.28);
+  }
+
   .ui-urgent-badge {
     animation: urgent-badge 1.8s ease-in-out infinite;
   }
@@ -241,6 +336,10 @@ a.ui-icon-btn:active {
 
   .ui-icon-btn {
     @apply inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-neutral-200/60 bg-white/60 text-neutral-800 shadow-[0_2px_10px_rgba(0,0,0,0.02)] backdrop-blur-md transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-white/90 hover:text-neutral-900 active:scale-95;
+  }
+
+  .ui-icon-btn-danger {
+    @apply text-[#FF3B30] hover:bg-[#FF3B30]/10 hover:text-[#ff2d20];
   }
 
   .ui-input {
@@ -313,6 +412,10 @@ a.ui-icon-btn:active {
     @apply rounded-2xl border border-rose/20 bg-white/75 px-4 py-3 text-sm text-ink shadow-[0_8px_24px_rgba(180,35,24,0.08)] backdrop-blur-md;
   }
 
+  .ui-alert-warn {
+    @apply rounded-2xl border border-amber-400/40 bg-[#fff6e5] px-4 py-3 text-sm font-medium leading-relaxed text-[#8a3b00] shadow-[0_8px_24px_rgba(180,90,20,0.12)];
+  }
+
   .ui-link {
     @apply cursor-pointer text-sm font-medium text-neutral-700 underline-offset-4 transition-all duration-300 ease-out hover:text-neutral-900 hover:underline;
   }
@@ -326,7 +429,7 @@ a.ui-icon-btn:active {
   }
 
   .ui-nav {
-    @apply sticky top-0 z-20 border-b border-neutral-200/60 bg-white/70 shadow-[0_4px_30px_rgba(0,0,0,0.02)] backdrop-blur-xl;
+    @apply sticky top-0 z-20;
   }
 
   .ui-tabbar {
@@ -347,5 +450,110 @@ a.ui-icon-btn:active {
 
   .ui-sheet-out {
     animation: sheet-out 0.22s ease-in both;
+  }
+
+  .ui-typing-bubble {
+    background: #e9e9eb;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    animation: ui-typing-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .ui-typing-dot {
+    display: block;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #8e8e93;
+    animation: ui-typing-dot 1.4s ease-in-out infinite;
+  }
+
+  .ui-typing-dot:nth-child(2) {
+    animation-delay: 0.16s;
+  }
+
+  .ui-typing-dot:nth-child(3) {
+    animation-delay: 0.32s;
+  }
+
+  .ui-ios-switch {
+    position: relative;
+    width: 51px;
+    height: 31px;
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 999px;
+    background: #e5e5ea;
+    transition: background-color 220ms ease;
+  }
+
+  .ui-ios-switch[data-on="true"] {
+    background: #34c759;
+  }
+
+  .ui-ios-switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    height: 27px;
+    width: 27px;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 1px 1px rgba(0, 0, 0, 0.08);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .ui-ios-switch[data-on="true"] .ui-ios-switch-knob {
+    transform: translateX(20px);
+  }
+
+  .ui-settings-card {
+    @apply overflow-hidden rounded-2xl border border-white/40 bg-white/60 backdrop-blur-xl;
+  }
+
+  .ui-settings-row {
+    @apply flex w-full items-center gap-3 px-4 py-3.5 text-left text-[15px] text-ink transition-colors duration-200;
+  }
+
+  .ui-settings-row:hover {
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  .ui-success-toast {
+    @apply flex max-w-[min(92vw,420px)] items-center gap-3 rounded-xl border border-white/20 bg-white/90 px-4 py-3 text-left text-sm text-ink shadow-xl backdrop-blur-md;
+    animation: toast-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .ui-success-toast-out {
+    animation: toast-out 0.22s ease-in both;
+  }
+
+  .ui-offer-out {
+    animation: offer-out 0.32s ease-in both;
+    pointer-events: none;
+  }
+
+  .ui-spin {
+    animation: ui-spin 0.7s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ui-typing-bubble {
+      animation: none;
+    }
+
+    .ui-typing-dot {
+      animation: ui-typing-dot-fade 1.4s ease-in-out infinite;
+    }
+
+    .ui-spin,
+    .ui-success-toast,
+    .ui-success-toast-out,
+    .ui-offer-out,
+    .ui-overlay-out,
+    .ui-sheet-out,
+    .ui-card-urgent,
+    .ui-urgent-badge {
+      animation: none;
+    }
   }
 }

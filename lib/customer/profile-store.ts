@@ -15,6 +15,8 @@ export type CustomerProfile = {
   treatment_pass: TreatmentPass;
   beauty_points: number;
   member_level: string;
+  gender: "female" | "male" | "diverse" | null;
+  in_app_push: boolean;
 };
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -71,6 +73,9 @@ export function mapCustomerProfileRow(row: unknown, userId: string): CustomerPro
   }
 
   const points = Math.max(0, Number(data.beauty_points ?? 0) || 0);
+  const genderRaw = data.gender != null ? String(data.gender) : "";
+  const gender =
+    genderRaw === "female" || genderRaw === "male" || genderRaw === "diverse" ? genderRaw : null;
 
   return {
     id: data.id != null ? String(data.id) : null,
@@ -89,6 +94,8 @@ export function mapCustomerProfileRow(row: unknown, userId: string): CustomerPro
     member_level: normalizeMemberLevel(
       data.member_level != null ? String(data.member_level) : memberLevelFromPoints(points),
     ),
+    gender,
+    in_app_push: data.in_app_push == null ? true : Boolean(data.in_app_push),
   };
 }
 

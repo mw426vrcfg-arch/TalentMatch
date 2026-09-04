@@ -1,6 +1,6 @@
 import { PullToRefresh } from "@/components/app/pull-to-refresh";
 import { TodayAppointmentBanner } from "@/components/customer/today-appointment-banner";
-import { InspirationFeed } from "@/components/inspiration/inspiration-feed";
+import { HomeOfferSearch } from "@/components/offers/home-offer-search";
 import { CustomerShell } from "@/components/customer/customer-shell";
 import { StrikeAlert } from "@/components/customer/strike-alert";
 import { requireCustomer } from "@/lib/auth/require-customer";
@@ -12,7 +12,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-export default async function CustomerHomePage() {
+export default async function CustomerHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const { user, profile, strikes } = await requireCustomer();
   const loyalty = await loadCustomerLoyalty(createAdminClient(), user.id);
   const [tiles, favoriteIds] = await Promise.all([
@@ -32,22 +37,28 @@ export default async function CustomerHomePage() {
     const loc = todayVisit?.event_location || todayVisit?.counterpart_address || "";
     const city = loc.split(",").pop()?.trim();
     if (!city) {
-      return "deinem Salon";
+      return "";
     }
     return city.toLocaleLowerCase("de-CH").startsWith("region ") ? city : `Region ${city}`;
   })();
 
   return (
-    <CustomerShell title="Home" userName={profile.full_name} signedIn>
+    <CustomerShell titleKey="nav.home" userName={profile.full_name} signedIn>
       <PullToRefresh />
-      {todayVisit ? (
-        <TodayAppointmentBanner startTime={todayVisit.start_time} region={place} />
-      ) : null}
-      <StrikeAlert userId={user.id} initialCount={strikes} />
-      <div className="mb-8 max-w-2xl">
-        <h1 className="font-serif text-4xl text-ink sm:text-5xl">Dashboard</h1>
+      <div className="mb-6">
+        <HomeOfferSearch
+          tiles={tiles}
+          initialQuery={q ?? ""}
+          memberLevel={loyalty.level}
+          favoriteIds={favoriteIds}
+          showFavorite
+        >
+          {todayVisit ? (
+            <TodayAppointmentBanner startTime={todayVisit.start_time} region={place} />
+          ) : null}
+          <StrikeAlert userId={user.id} initialCount={strikes} />
+        </HomeOfferSearch>
       </div>
-      <InspirationFeed tiles={tiles} memberLevel={loyalty.level} favoriteIds={favoriteIds} showFavorite />
     </CustomerShell>
   );
 }

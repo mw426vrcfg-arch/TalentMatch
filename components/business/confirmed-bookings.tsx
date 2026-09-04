@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { completeBookingAction, type CompleteBookingState } from "@/app/business/complete-actions";
 import { reportNoShowAction, type NoShowState } from "@/app/business/no-show-actions";
+import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { type ConfirmedBooking } from "@/lib/bookings/salon-confirmed";
 import { formatSlot } from "@/lib/offers/format";
 
@@ -10,24 +11,22 @@ const initialNoShow: NoShowState = {};
 const initialComplete: CompleteBookingState = {};
 
 export function NoShowButton({ bookingId }: { bookingId: string }) {
+  const t = useT();
+  const localize = useLocalize();
   const [state, formAction, pending] = useActionState(reportNoShowAction, initialNoShow);
 
   return (
     <div className="space-y-2">
       {state.error && (
-        <p className="text-sm text-ink">{state.error}</p>
+        <p className="text-sm text-ink">{localize(state.error)}</p>
       )}
       {state.success && (
-        <p className="text-sm text-zinc-600">{state.success}</p>
+        <p className="text-sm text-zinc-600">{localize(state.success)}</p>
       )}
       <form
         action={formAction}
         onSubmit={(event) => {
-          if (
-            !window.confirm(
-              "No-Show wirklich melden? Der Kunde erhält einen Strike. Beim dritten Strike wird der Login gesperrt.",
-            )
-          ) {
+          if (!window.confirm(t("booking.noShowConfirm"))) {
             event.preventDefault();
           }
         }}
@@ -38,7 +37,7 @@ export function NoShowButton({ bookingId }: { bookingId: string }) {
           disabled={pending}
           className="ui-btn-danger"
         >
-          {pending ? "Wird gemeldet…" : "No-Show melden"}
+          {pending ? t("booking.reporting") : t("booking.noShow")}
         </button>
       </form>
     </div>
@@ -46,11 +45,13 @@ export function NoShowButton({ bookingId }: { bookingId: string }) {
 }
 
 export function CompleteButton({ bookingId }: { bookingId: string }) {
+  const t = useT();
+  const localize = useLocalize();
   const [state, formAction, pending] = useActionState(completeBookingAction, initialComplete);
 
   return (
     <div className="space-y-2">
-      {state.error && <p className="text-sm text-ink">{state.error}</p>}
+      {state.error && <p className="text-sm text-ink">{localize(state.error)}</p>}
       <form action={formAction}>
         <input type="hidden" name="booking_id" value={bookingId} />
         <button
@@ -58,7 +59,7 @@ export function CompleteButton({ bookingId }: { bookingId: string }) {
           disabled={pending}
           className="ui-btn-primary"
         >
-          {pending ? "Wird abgeschlossen…" : "Termin abschliessen"}
+          {pending ? t("booking.completing") : t("booking.complete")}
         </button>
       </form>
     </div>
@@ -66,21 +67,21 @@ export function CompleteButton({ bookingId }: { bookingId: string }) {
 }
 
 export function ConfirmedBookings({ bookings }: { bookings: ConfirmedBooking[] }) {
+  const t = useT();
+
   return (
     <section className="mb-12">
       <div className="max-w-2xl">
-        <p className="ui-kicker">Kapitel 5 · Strike-System</p>
-        <h2 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">Bestätigte Termine</h2>
+        <p className="ui-kicker">{t("salon.confirmedKicker")}</p>
+        <h2 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">{t("salon.confirmedAppointments")}</h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          Nach dem Termin schliesst du ab, damit beide Seiten bewerten können. Bei No-Show gibt es einen Strike.
+          {t("salon.confirmedIntro")}
         </p>
       </div>
 
       <div className="mt-6 space-y-4">
         {bookings.length === 0 ? (
-          <div className="ui-empty">
-            Keine bestätigten Termine. Nach dem Akzeptieren einer Bewerbung erscheint der Termin hier.
-          </div>
+          <div className="ui-empty">{t("salon.confirmedEmpty")}</div>
         ) : (
           bookings.map((booking) => (
             <article
@@ -97,11 +98,11 @@ export function ConfirmedBookings({ bookings }: { bookings: ConfirmedBooking[] }
                   <p className="text-sm text-ink-soft">{booking.customer_email}</p>
                 </div>
                 <span className="ui-badge">
-                  confirmed
+                  {t("status.confirmed")}
                 </span>
               </div>
               <p className="mt-3 text-sm text-ink-soft">
-                Aktive Strikes: {booking.active_strikes} / 3
+                {t("booking.strikesCount", { count: booking.active_strikes })}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <CompleteButton bookingId={booking.id} />

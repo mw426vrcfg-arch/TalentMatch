@@ -206,7 +206,7 @@ export async function reviewApplicationAction(
       await createNotification(admin, {
         userId: application.customer_id,
         type: "application_accepted",
-        title: "Bewerbung angenommen",
+        title: "Der Salon hat dich angenommen",
         message: `Dein Termin am ${when} wurde bestätigt!`,
         applicationId: application.id,
         offerId: application.offer_id,
@@ -222,7 +222,7 @@ export async function reviewApplicationAction(
       await createNotification(admin, {
         userId: application.customer_id,
         type: "application_accepted",
-        title: "Bewerbung angenommen",
+        title: "Der Salon hat dich angenommen",
         message: "Dein Termin am gewählten Slot wurde bestätigt!",
         applicationId: application.id,
         offerId: application.offer_id,

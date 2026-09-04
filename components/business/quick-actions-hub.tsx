@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useT } from "@/components/i18n/i18n-provider";
 import { type SalonQuickActions } from "@/lib/business/quick-actions";
 
 function HubCard({
@@ -7,24 +10,28 @@ function HubCard({
   hint,
   href,
   alert,
+  compact = false,
 }: {
   kicker: string;
   value: string;
   hint: string;
   href?: string;
   alert?: boolean;
+  compact?: boolean;
 }) {
   const content = (
     <article
-      className={`rounded-[28px] border p-5 shadow-[0_18px_50px_rgba(15,15,20,0.08)] backdrop-blur-md ${
-        alert
-          ? "border-rose/25 bg-rose/10"
-          : "border-white/20 bg-white/70"
-      }`}
+      className={`border backdrop-blur-xl transition-all duration-300 ease-out ${
+        compact
+          ? "rounded-2xl px-2.5 py-2.5 shadow-[0_8px_24px_rgba(15,15,20,0.05)]"
+          : "rounded-[28px] p-5 shadow-[0_18px_50px_rgba(15,15,20,0.08)]"
+      } ${alert ? "border-rose/25 bg-rose/10" : "border-white/20 bg-white/60"}`}
     >
-      <p className="ui-kicker">{kicker}</p>
-      <p className="mt-3 font-serif text-3xl text-ink sm:text-4xl">{value}</p>
-      <p className="mt-2 text-sm leading-relaxed text-ink-soft">{hint}</p>
+      <p className={`ui-kicker ${compact ? "truncate" : ""}`}>{kicker}</p>
+      <p className={`font-serif text-ink ${compact ? "mt-1 text-lg leading-none sm:text-xl" : "mt-3 text-3xl sm:text-4xl"}`}>
+        {value}
+      </p>
+      {compact ? null : <p className="mt-2 text-sm leading-relaxed text-ink-soft">{hint}</p>}
     </article>
   );
 
@@ -39,36 +46,51 @@ function HubCard({
   );
 }
 
-export function SalonQuickActionsHub({ stats }: { stats: SalonQuickActions }) {
+export function SalonQuickActionsHub({
+  stats,
+  compact = false,
+}: {
+  stats: SalonQuickActions;
+  compact?: boolean;
+}) {
+  const t = useT();
   const unread = stats.unansweredChats > 0;
 
   return (
-    <section className="mb-10">
+    <section className={compact ? "mb-3" : "mb-10"}>
       <div className="max-w-2xl">
-        <p className="ui-kicker">Kapitel 3.2 · Quick Actions</p>
-        <h2 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">Heute im Blick</h2>
+        {compact ? null : <p className="ui-kicker">{t("quick.kicker")}</p>}
+        <h2 className={`font-serif text-ink ${compact ? "text-sm sm:text-base" : "mt-3 text-3xl sm:text-4xl"}`}>
+          {t("quick.title")}
+        </h2>
       </div>
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <div className={compact ? "mt-2 grid grid-cols-3 gap-2" : "mt-6 grid gap-4 md:grid-cols-3"}>
         <HubCard
-          kicker="Heutige Termine"
+          compact={compact}
+          kicker={t("quick.today")}
           value={String(stats.todayCount)}
           hint={
             stats.todayCount === 1
-              ? "1 bestätigter Termin heute."
-              : `${stats.todayCount} bestätigte Termine heute.`
+              ? t("quick.todayOne")
+              : t("quick.todayMany", { count: stats.todayCount })
           }
         />
         <HubCard
-          kicker="Ungelesene Chats"
+          compact={compact}
+          kicker={t("quick.chats")}
           value={unread ? String(stats.unansweredChats) : "0"}
-          hint={unread ? "Modelle warten auf deine Antwort." : "Keine unbeantworteten Chats."}
-          href="/business/dashboard"
+          hint={unread ? t("quick.chatsWaiting") : t("quick.chatsNone")}
+          href="/business/applications#meine-termine"
           alert={unread}
         />
         <HubCard
-          kicker="Last-Minute-Deals"
-          value={`${stats.urgentRemaining} von ${stats.urgentLimit}`}
-          hint={`${stats.urgentRemaining} von ${stats.urgentLimit} verbleibend in diesem Monat.`}
+          compact={compact}
+          kicker={t("quick.lastMinute")}
+          value={`${stats.urgentRemaining} / ${stats.urgentLimit}`}
+          hint={t("quick.remaining", {
+            remaining: stats.urgentRemaining,
+            limit: stats.urgentLimit,
+          })}
           href="/business/offers"
         />
       </div>

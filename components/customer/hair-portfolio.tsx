@@ -6,11 +6,14 @@ import {
   removeHairPortfolioImageAction,
   type HairPortfolioFormState,
 } from "@/app/dashboard/profile/actions";
+import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { MAX_PORTFOLIO_IMAGES } from "@/lib/customer/portfolio";
 
 const initialState: HairPortfolioFormState = {};
 
 export function HairPortfolioEditor({ images }: { images: string[] }) {
+  const t = useT();
+  const localize = useLocalize();
   const [state, formAction, pending] = useActionState(
     addHairPortfolioImagesAction,
     initialState,
@@ -20,17 +23,16 @@ export function HairPortfolioEditor({ images }: { images: string[] }) {
 
   return (
     <section className="ui-card mt-8 p-5 sm:p-8">
-      <p className="ui-kicker">Haar-Portfolio</p>
-      <h2 className="mt-3 font-serif text-3xl text-ink">Mein Haar-Portfolio</h2>
+      <p className="ui-kicker">{t("profile.portfolioKicker")}</p>
+      <h2 className="mt-3 font-serif text-3xl text-ink">{t("profile.portfolioTitle")}</h2>
       <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-        Bis zu sechs dauerhafte Bilder. Salons sehen diese Galerie anonymisiert — ohne deinen
-        Klarnamen.
+        {t("profile.portfolioIntro")}
       </p>
       <p className="mt-3 text-sm text-ink-soft">
-        {images.length} / {MAX_PORTFOLIO_IMAGES} Bilder
+        {t("profile.count", { count: images.length })}
       </p>
 
-      {state.error ? <p className="ui-alert-error mt-4">{state.error}</p> : null}
+      {state.error ? <p className="ui-alert-error mt-4">{localize(state.error)}</p> : null}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {images.map((url, index) => (
@@ -38,14 +40,14 @@ export function HairPortfolioEditor({ images }: { images: string[] }) {
             key={url}
             className="ui-glass group relative aspect-[3/4] overflow-hidden rounded-[22px]"
           >
-            <img src={url} alt={`Haar ${index + 1}`} className="h-full w-full object-cover" />
+            <img src={url} alt={t("profile.hairAlt", { n: index + 1 })} className="h-full w-full object-cover" />
             <form action={removeHairPortfolioImageAction} className="absolute right-2 top-2">
               <input type="hidden" name="url" value={url} />
               <button
                 type="submit"
                 className="ui-btn-secondary px-3 py-1 text-xs"
               >
-                Entfernen
+                {t("actions.remove")}
               </button>
             </form>
           </figure>
@@ -59,7 +61,7 @@ export function HairPortfolioEditor({ images }: { images: string[] }) {
                 onClick={() => inputRef.current?.click()}
                 className="flex aspect-[3/4] cursor-pointer items-center justify-center rounded-[22px] border border-dashed border-neutral-200/80 bg-white/50 text-center text-sm text-neutral-400 backdrop-blur-sm transition-all duration-300 ease-out hover:scale-[1.015] hover:bg-white/90 hover:text-neutral-600 active:scale-95"
               >
-                Bild hinzufügen
+                {t("profile.addImage")}
               </button>
             ))
           : null}
@@ -81,8 +83,8 @@ export function HairPortfolioEditor({ images }: { images: string[] }) {
             }}
           />
           <p className="mt-2 text-xs text-ink-soft">
-            JPG, PNG oder WebP, max. 2 MB je Bild. Du kannst mehrere Dateien auf einmal wählen.
-            {pending ? " Wird hochgeladen…" : ""}
+            {t("profile.portfolioHint")}
+            {pending ? ` ${t("profile.uploading")}` : ""}
           </p>
         </form>
       ) : null}

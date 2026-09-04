@@ -1,12 +1,12 @@
-export function formatChf(value: number | string) {
-  return new Intl.NumberFormat("de-CH", {
+export function formatChf(value: number | string, locale = "de-CH") {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "CHF",
   }).format(Number(value));
 }
 
-export function formatSlot(iso: string) {
-  return new Intl.DateTimeFormat("de-CH", {
+export function formatSlot(iso: string, locale = "de-CH") {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -15,15 +15,15 @@ export function formatSlot(iso: string) {
   }).format(new Date(iso));
 }
 
-export function formatSlotTime(iso: string) {
-  return new Intl.DateTimeFormat("de-CH", {
+export function formatSlotTime(iso: string, locale = "de-CH") {
+  return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(iso));
 }
 
-export function formatSlotDay(iso: string) {
-  return new Intl.DateTimeFormat("de-CH", {
+export function formatSlotDay(iso: string, locale = "de-CH") {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "long",
     day: "numeric",
     month: "long",

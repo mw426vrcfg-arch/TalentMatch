@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { registerAction, type AuthState } from "@/app/auth/actions";
+import { PasswordField } from "@/components/auth/password-field";
+import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 
 const initialState: AuthState = {};
 
@@ -14,20 +16,36 @@ export function RegisterForm({
   initialRole?: Role;
   referredBy?: string;
 }) {
+  const t = useT();
+  const localize = useLocalize();
   const [role, setRole] = useState<Role>(initialRole);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [mismatch, setMismatch] = useState("");
   const [state, formAction, pending] = useActionState(registerAction, initialState);
 
   const roleCard = (active: boolean) =>
     active ? "ui-choice-card-active" : "ui-choice-card";
 
   return (
-    <form action={formAction} className="space-y-7">
-      {state.error && <p className="ui-alert-error">{state.error}</p>}
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        if (password !== confirm) {
+          event.preventDefault();
+          setMismatch(t("auth.passwordsMismatch"));
+        }
+      }}
+      className="space-y-7"
+    >
+      {(state.error || mismatch) && (
+        <p className="ui-alert-error">{mismatch || localize(state.error ?? "")}</p>
+      )}
 
-      {state.success && <p className="ui-alert-ok">{state.success}</p>}
+      {state.success && <p className="ui-alert-ok">{localize(state.success)}</p>}
 
       <div>
-        <p className="mb-2 text-sm text-ink-soft">Ich registriere mich als</p>
+        <p className="mb-2 text-sm text-ink-soft">{t("auth.registerAs")}</p>
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -37,9 +55,11 @@ export function RegisterForm({
               referredBy ? "cursor-not-allowed opacity-50" : ""
             }`}
           >
-            <span className={`block text-sm font-medium ${role === "customer" ? "text-white" : "text-ink"}`}>Kunde</span>
+            <span className={`block text-sm font-medium ${role === "customer" ? "text-white" : "text-ink"}`}>
+              {t("auth.customer")}
+            </span>
             <span className={`mt-1 block text-xs leading-relaxed ${role === "customer" ? "text-white/70" : "text-ink-soft"}`}>
-              Deals finden und bewerben
+              {t("auth.customerHint")}
             </span>
           </button>
           <button
@@ -47,9 +67,11 @@ export function RegisterForm({
             onClick={() => setRole("business")}
             className={roleCard(role === "business")}
           >
-            <span className={`block text-sm font-medium ${role === "business" ? "text-white" : "text-ink"}`}>Salon</span>
+            <span className={`block text-sm font-medium ${role === "business" ? "text-white" : "text-ink"}`}>
+              {t("auth.salon")}
+            </span>
             <span className={`mt-1 block text-xs leading-relaxed ${role === "business" ? "text-white/70" : "text-ink-soft"}`}>
-              {referredBy ? "Kapazitäten anbieten · Einladung eines Salons" : "Kapazitäten anbieten"}
+              {t("auth.salonHint")}
             </span>
           </button>
         </div>
@@ -57,25 +79,25 @@ export function RegisterForm({
 
       <div className="space-y-5">
         <label className="block">
-          <span className="mb-1.5 block text-sm text-ink-soft">Vollständiger Name</span>
+          <span className="mb-1.5 block text-sm text-ink-soft">{t("auth.fullName")}</span>
           <input required name="full_name" autoComplete="name" className="ui-input" />
         </label>
 
         {role === "business" && (
           <>
             <label className="block">
-              <span className="mb-1.5 block text-sm text-ink-soft">Salonname</span>
+              <span className="mb-1.5 block text-sm text-ink-soft">{t("auth.salonName")}</span>
               <input required name="business_name" className="ui-input" />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-sm text-ink-soft">Standort</span>
-              <input required name="location" placeholder="z. B. Zürich" className="ui-input" />
+              <span className="mb-1.5 block text-sm text-ink-soft">{t("auth.location")}</span>
+              <input required name="location" placeholder={t("auth.locationPlaceholder")} className="ui-input" />
             </label>
           </>
         )}
 
         <label className="block">
-          <span className="mb-1.5 block text-sm text-ink-soft">E-Mail</span>
+          <span className="mb-1.5 block text-sm text-ink-soft">{t("auth.email")}</span>
           <input
             required
             type="email"
@@ -86,25 +108,38 @@ export function RegisterForm({
         </label>
 
         <label className="block">
-          <span className="mb-1.5 block text-sm text-ink-soft">Telefon (optional)</span>
+          <span className="mb-1.5 block text-sm text-ink-soft">{t("auth.phone")}</span>
           <input type="tel" name="phone" autoComplete="tel" className="ui-input" />
         </label>
 
-        <label className="block">
-          <span className="mb-1.5 block text-sm text-ink-soft">Passwort</span>
-          <input
-            required
-            type="password"
-            name="password"
-            minLength={8}
-            autoComplete="new-password"
-            className="ui-input"
-          />
-        </label>
+        <PasswordField
+          required
+          name="password"
+          minLength={8}
+          autoComplete="new-password"
+          label={t("auth.password")}
+          value={password}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setMismatch("");
+          }}
+        />
+        <PasswordField
+          required
+          name="password_confirm"
+          minLength={8}
+          autoComplete="new-password"
+          label={t("auth.confirmPassword")}
+          value={confirm}
+          onChange={(event) => {
+            setConfirm(event.target.value);
+            setMismatch("");
+          }}
+        />
       </div>
 
       <button type="submit" disabled={pending} className="ui-btn-primary w-full">
-        {pending ? "Konto wird erstellt…" : "Registrieren"}
+        {pending ? t("auth.creatingAccount") : t("auth.register")}
       </button>
 
       {/* Stehen am Ende, sonst erzeugt space-y über dem ersten Block einen leeren Abstand. */}

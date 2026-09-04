@@ -1,3 +1,8 @@
+"use client";
+
+import { AppHeader } from "@/components/app/app-header";
+import { useT } from "@/components/i18n/i18n-provider";
+
 const BLOCK = "animate-pulse bg-neutral-200/50";
 
 export function Skeleton({ className = "" }: { className?: string }) {
@@ -45,20 +50,19 @@ export function SkeletonCard({
  * gleiche Tab-Leiste wie die echten Shells, damit beim Wechsel nichts springt.
  */
 export function SkeletonScreen({ tabs = 4, children }: { tabs?: number; children: React.ReactNode }) {
+  const t = useT();
   return (
-    <main className="min-h-screen pb-24" role="status" aria-label="Inhalte werden geladen">
-      <header className="ui-nav">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="min-w-0">
-            <p className="font-serif text-xl text-ink">TalentMatch</p>
-            <Skeleton className="mt-1.5 h-2.5 w-20 rounded-full" />
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Skeleton className="h-9 w-9 rounded-full" />
-            <Skeleton className="h-9 w-24 rounded-full" />
-          </div>
+    <main className="min-h-screen pb-24" role="status" aria-label={t("common.loadingContent")}>
+      <AppHeader>
+        <div className="min-w-0">
+          <p className="app-header-brand font-serif text-xl tracking-tight text-ink">TalentMatch</p>
+          <Skeleton className="mt-1.5 h-2.5 w-20 rounded-full" />
         </div>
-      </header>
+        <div className="flex shrink-0 items-center gap-2">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-9 w-24 rounded-full" />
+        </div>
+      </AppHeader>
 
       <div className="app-screen mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">{children}</div>
 
@@ -217,10 +221,11 @@ export function SkeletonStatGrid({ count = 3 }: { count?: number }) {
 
 /** Chatblasen im Wechsel links/rechts, passend zu AppointmentChat. */
 export function SkeletonChat({ bubbles = 4 }: { bubbles?: number }) {
+  const t = useT();
   const widths = ["w-40", "w-56", "w-32", "w-48", "w-44"];
 
   return (
-    <div className="space-y-2" role="status" aria-label="Nachrichten werden geladen">
+    <div className="space-y-2" role="status" aria-label={t("common.loadingChat")}>
       {Array.from({ length: bubbles }).map((_, index) => {
         const mine = index % 2 === 1;
         return (
@@ -235,10 +240,11 @@ export function SkeletonChat({ bubbles = 4 }: { bubbles?: number }) {
 
 /** Auswahl-Chips, z. B. freie Slots einer Verschiebungsanfrage. */
 export function SkeletonChips({ count = 4 }: { count?: number }) {
+  const t = useT();
   const widths = ["w-32", "w-28", "w-36", "w-24"];
 
   return (
-    <div className="flex flex-wrap gap-2" role="status" aria-label="Freie Slots werden geladen">
+    <div className="flex flex-wrap gap-2" role="status" aria-label={t("common.loadingSlots")}>
       {Array.from({ length: count }).map((_, index) => (
         <Skeleton key={index} className={`h-8 rounded-full ${widths[index % widths.length]}`} />
       ))}

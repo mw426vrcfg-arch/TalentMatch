@@ -1,4 +1,6 @@
 import { readHairProfile, type HairProfile } from "@/lib/hair/criteria";
+import { resolveBusinessImageUrl } from "@/lib/business/images";
+import { isUrgentFlag } from "@/lib/offers/urgent-flag";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type SalonOfferSlot = {
@@ -66,9 +68,9 @@ export function mapSalonOffer(row: unknown): SalonOfferListItem | null {
     duration_minutes: Number(record.duration_minutes) || 60,
     status: String(record.status ?? "active"),
     available_slots: typeof record.available_slots === "number" ? record.available_slots : null,
-    is_urgent: Boolean(record.is_urgent),
+    is_urgent: isUrgentFlag(record.is_urgent),
     vip_early_access: Boolean(record.vip_early_access),
-    image_url: record.image_url ? String(record.image_url) : null,
+    image_url: resolveBusinessImageUrl(record.image_url ? String(record.image_url) : null),
     hair: readHairProfile(record),
     offer_slots: slots.sort(
       (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),

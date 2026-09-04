@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { OfferCard } from "@/components/offers/offer-card";
-import { searchBrowseOffers } from "@/lib/offers/fuzzy-search";
+import { UrgentFilterToggle } from "@/components/offers/urgent-filter";
+import { useT, useLocale } from "@/components/i18n/i18n-provider";
+import { pinUrgentOffers, searchBrowseOffers } from "@/lib/offers/fuzzy-search";
+import { isUrgentFlag } from "@/lib/offers/urgent-flag";
 import { type BrowseOffer } from "@/lib/offers/load-active-offers";
 
 export function BrowseSearchBoard({
@@ -21,13 +24,19 @@ export function BrowseSearchBoard({
   showFavorite?: boolean;
   matchIds?: string[];
 }) {
+  const t = useT();
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState(initialQuery);
+  const [urgentOnly, setUrgentOnly] = useState(false);
   const searching = query.trim().length > 0;
-  const ranked = useMemo(() => searchBrowseOffers(offers, query), [offers, query]);
-  const urgent = searching ? [] : ranked.filter((offer) => offer.is_urgent);
-  const rest = searching ? ranked : ranked.filter((offer) => !offer.is_urgent);
+  const ranked = useMemo(() => {
+    const found = searchBrowseOffers(offers, query, locale);
+    const scoped = urgentOnly ? found.filter((offer) => isUrgentFlag(offer.is_urgent)) : found;
+    return pinUrgentOffers(scoped);
+  }, [offers, query, locale, urgentOnly]);
+  const filtering = searching || urgentOnly;
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -58,8 +67,8 @@ export function BrowseSearchBoard({
     <>
       <div className="mt-10 max-w-2xl">
         <label className="block">
-          <span className="ui-kicker">Suche</span>
-          <span className="ui-input mt-3 flex items-center gap-3 rounded-full py-2.5">
+          <span className="ui-kicker">{t("browse.search")}</span>
+          <span className="ui-input mt-3 flex items-center gap-3 rounded-full py-2.5 backdrop-blur-xl">
             <svg
               viewBox="0 0 24 24"
               className="h-5 w-5 shrink-0 text-ink-soft"
@@ -75,10 +84,10 @@ export function BrowseSearchBoard({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Balayage, Zürich, Kurzhaarschnitt…"
+              placeholder={t("browse.searchPlaceholder")}
               autoComplete="off"
               className="min-w-0 flex-1 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400"
-              aria-label="Angebote durchsuchen"
+              aria-label={t("browse.searchAria")}
             />
             {query ? (
               <button
@@ -86,66 +95,48 @@ export function BrowseSearchBoard({
                 onClick={() => setQuery("")}
                 className="ui-btn-secondary px-3 py-1 text-[11px]"
               >
-                Leeren
+                {t("common.clear")}
               </button>
             ) : null}
           </span>
         </label>
+        <div className="mt-3">
+          <UrgentFilterToggle on={urgentOnly} onChange={setUrgentOnly} />
+        </div>
         <p className="mt-3 text-sm text-ink-soft">
-          {searching
+          {filtering
             ? ranked.length === 1
-              ? "1 Treffer, sortiert nach Relevanz."
-              : `${ranked.length} Treffer, sortiert nach Relevanz.`
-            : "Tippfehler sind erlaubt — z. B. findet Balyage auch Balayage."}
+              ? t("browse.hitsOne")
+              : t("browse.hitsMany", { count: ranked.length })
+            : t("browse.searchHint")}
         </p>
       </div>
 
       {ranked.length === 0 ? (
         <div className="ui-empty mt-10 py-14 text-center">
-          <p className="font-serif text-2xl text-ink">Keine Angebote gefunden</p>
+          <p className="font-serif text-2xl text-ink">
+            {urgentOnly && !searching ? t("browse.urgentEmptyTitle") : t("browse.emptyTitle")}
+          </p>
           <p className="mt-2 text-sm text-ink-soft">
             {searching
-              ? `Keine Treffer für „${query.trim()}“. Versuche einen anderen Begriff.`
-              : "Sobald Salons Angebote veröffentlichen, erscheinen sie hier."}
+              ? t("browse.emptyQueryHint", { query: query.trim() })
+              : urgentOnly
+                ? t("browse.urgentEmpty")
+                : t("browse.emptyIdle")}
           </p>
         </div>
       ) : (
-        <>
-          {urgent.length > 0 ? (
-            <section className="mt-10">
-              <p className="ui-kicker">Urgent Match · Kapitel 5.2</p>
-              <h2 className="mt-2 font-serif text-3xl text-ink">Last-Minute</h2>
-              <p className="mt-2 max-w-xl text-sm text-ink-soft">
-                Dringende Deals — angepinnt, damit freie Kapazitäten sofort sichtbar sind.
-              </p>
-              <div className="mt-6 grid gap-6 md:grid-cols-2">
-                {urgent.map((offer) => (
-                  <OfferCard
-                    key={offer.id}
-                    offer={offer}
-                    showFavorite={showFavorite}
-                    favorited={favoriteIds.includes(offer.id)}
-                    perfectMatch={matchIds.includes(offer.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {rest.length > 0 ? (
-            <div className="mt-10 grid gap-6 md:grid-cols-2">
-              {rest.map((offer) => (
-              <OfferCard
-                key={offer.id}
-                offer={offer}
-                showFavorite={showFavorite}
-                favorited={favoriteIds.includes(offer.id)}
-                perfectMatch={matchIds.includes(offer.id)}
-              />
-              ))}
-            </div>
-          ) : null}
-        </>
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          {ranked.map((offer) => (
+            <OfferCard
+              key={offer.id}
+              offer={offer}
+              showFavorite={showFavorite}
+              favorited={favoriteIds.includes(offer.id)}
+              perfectMatch={matchIds.includes(offer.id)}
+            />
+          ))}
+        </div>
       )}
     </>
   );

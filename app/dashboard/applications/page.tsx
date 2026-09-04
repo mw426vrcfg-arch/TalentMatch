@@ -6,15 +6,16 @@ import { loadCustomerApplications } from "@/lib/applications/queries";
 import { requireCustomer } from "@/lib/auth/require-customer";
 import { loadCustomerAppointments } from "@/lib/bookings/overview";
 import { loadPendingRatingsForUser } from "@/lib/ratings/store";
+import { T } from "@/components/i18n/t";
 
 export const dynamic = "force-dynamic";
 
 export default async function CustomerApplicationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ applied?: string }>;
+  searchParams: Promise<{ applied?: string; appointment?: string; chat?: string }>;
 }) {
-  const { applied } = await searchParams;
+  const { applied, appointment, chat } = await searchParams;
   const { user, profile } = await requireCustomer();
   const [applications, appointments, pendingRatings] = await Promise.all([
     loadCustomerApplications(profile.id),
@@ -30,14 +31,20 @@ export default async function CustomerApplicationsPage({
   );
 
   return (
-    <CustomerShell title="Bewerbungen" userName={profile.full_name} signedIn>
+    <CustomerShell titleKey="nav.applications" userName={profile.full_name} signedIn>
       {applied === "1" ? (
         <p className="ui-alert-ok mb-8">
-          Bewerbung gesendet. Status: pending — der Salon prüft deine Bilder und Notizen.
+          <T k="applications.sent" />
         </p>
       ) : null}
       <RatingWindow items={pendingRatings} role="customer" />
-      <MeineTermine items={appointments} role="customer" currentUserId={user.id} />
+      <MeineTermine
+        items={appointments}
+        role="customer"
+        currentUserId={user.id}
+        focusApplicationId={appointment}
+        openChat={chat === "1"}
+      />
       <MyApplications applications={openApplications} />
     </CustomerShell>
   );

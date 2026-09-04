@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CreateOfferForm } from "@/components/business/create-offer-form";
 import { OfferEditorOverlay } from "@/components/business/offer-editor-overlay";
+import { useT } from "@/components/i18n/i18n-provider";
 import { isOwnSalonOffer } from "@/lib/offers/ownership";
 import { type SalonOfferListItem } from "@/lib/offers/salon-list";
 import { hapticTap } from "@/lib/ui/haptic";
@@ -32,6 +33,7 @@ export function EditOfferButton({
   urgentLimit?: number;
   urgentUsed?: number;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   if (!isOwnSalonOffer(offer, currentUserId) || offer.salon_id !== currentUserId) {
@@ -47,15 +49,15 @@ export function EditOfferButton({
           setOpen(true);
         }}
         className="ui-icon-btn"
-        aria-label={`Angebot ${offer.title} bearbeiten`}
+        aria-label={t("create.editAria", { title: offer.title })}
       >
         <PencilIcon />
       </button>
       {open ? (
         <OfferEditorOverlay
-          kicker="Angebot bearbeiten"
-          title="Deal anpassen"
-          subtitle="Titel, Preise, Bild und neue Slots — nur für deinen Salon."
+          kicker={t("create.editKicker")}
+          title={t("create.editDeal")}
+          subtitle={t("create.editSubtitle")}
           onClose={() => setOpen(false)}
         >
           <CreateOfferForm

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useT } from "@/components/i18n/i18n-provider";
 
 const TRIGGER_DISTANCE = 72;
 const MAX_DISTANCE = 108;
@@ -33,6 +34,7 @@ function Spinner({ progress, spinning }: { progress: number; spinning: boolean }
 }
 
 export function PullToRefresh() {
+  const t = useT();
   const router = useRouter();
   const [distance, setDistance] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -156,7 +158,7 @@ export function PullToRefresh() {
     >
       <span
         role="status"
-        aria-label={busy ? "Daten werden aktualisiert" : undefined}
+        aria-label={busy ? t("common.refreshing") : undefined}
         className="flex h-9 w-9 items-center justify-center rounded-full border border-white/40 bg-white/80 shadow-[0_10px_28px_rgba(15,15,20,0.12)] backdrop-blur-xl"
         style={{
           opacity: active ? Math.max(busy ? 1 : 0.25, progress) : 0,

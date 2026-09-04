@@ -6,3 +6,5 @@ alter table public.offers
 create index if not exists offers_is_urgent_idx
   on public.offers (is_urgent)
   where is_urgent = true;
+
+notify pgrst, 'reload schema';

@@ -15,13 +15,14 @@ const FALLBACK_STATUS = "inactive";
 const CLEANUP_STATUSES = [OFFER_STATUS_ACTIVE, OFFER_STATUS_FULL, OFFER_STATUS_FULLY_BOOKED];
 
 const PAGE_SIZE = 500;
+const BACKGROUND_INTERVAL_MS = 5 * 60 * 1000;
 
 type SlotRow = { start_time: string; is_booked: boolean | null };
 
 type OfferRow = {
   id: string;
   status: string | null;
-  offer_slots: SlotRow[] | null;
+  offer_slots: SlotRow[];
 };
 
 export type OfferExpiryResult = {
@@ -30,10 +31,17 @@ export type OfferExpiryResult = {
   status_used: string;
 };
 
+let lastBackgroundRun = 0;
+let backgroundInFlight = false;
+
+function slotIsBooked(slot: SlotRow) {
+  return slot.is_booked === true;
+}
+
 /**
- * Abgelaufen ist ein Angebot, dessen Termine alle in der Vergangenheit liegen
- * und bei dem mindestens ein Slot nie gebucht wurde. Angebote ohne Slots bleiben
- * unberührt, damit frisch angelegte Deals nicht sofort verschwinden.
+ * Abgelaufen: alle Termine liegen in der Vergangenheit und mindestens ein Slot
+ * blieb ungebucht. Angebote ohne Slots bleiben unberührt, damit frisch angelegte
+ * Deals nicht sofort verschwinden.
  */
 export function isOfferExpired(slots: SlotRow[], now: number) {
   if (slots.length === 0) {
@@ -41,7 +49,7 @@ export function isOfferExpired(slots: SlotRow[], now: number) {
   }
 
   const allInPast = slots.every((slot) => new Date(slot.start_time).getTime() < now);
-  const hasUnbookedSlot = slots.some((slot) => !slot.is_booked);
+  const hasUnbookedSlot = slots.some((slot) => !slotIsBooked(slot));
 
   return allInPast && hasUnbookedSlot;
 }
@@ -57,13 +65,13 @@ async function selectCandidatePage(admin: Admin, statuses: string[], from: numbe
   for (let attempt = 0; attempt < statuses.length; attempt += 1) {
     const { data, error } = await admin
       .from("offers")
-      .select("id, status, offer_slots(start_time, is_booked)")
+      .select("id, status")
       .in("status", active)
       .order("created_at", { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
 
     if (!error) {
-      return { rows: (data ?? []) as unknown as OfferRow[], statuses: active };
+      return { rows: (data ?? []) as { id: string; status: string | null }[], statuses: active };
     }
 
     const unknown = error.message.match(/invalid input value for enum \w+: "([^"]+)"/i)?.[1];
@@ -80,19 +88,64 @@ async function selectCandidatePage(admin: Admin, statuses: string[], from: numbe
   throw new Error("Angebots-Status konnte nicht gelesen werden.");
 }
 
-async function loadCleanupCandidates(admin: Admin) {
-  const rows: OfferRow[] = [];
+async function loadSlotsByOffer(admin: Admin, offerIds: string[]) {
+  const byOffer = new Map<string, SlotRow[]>();
+  for (const id of offerIds) {
+    byOffer.set(id, []);
+  }
+
+  for (let start = 0; start < offerIds.length; start += PAGE_SIZE) {
+    const chunk = offerIds.slice(start, start + PAGE_SIZE);
+    const { data, error } = await admin
+      .from("offer_slots")
+      .select("offer_id, start_time, is_booked")
+      .in("offer_id", chunk);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    for (const row of data ?? []) {
+      const offerId = String((row as { offer_id?: string }).offer_id ?? "");
+      const startTime = (row as { start_time?: string }).start_time;
+      if (!offerId || typeof startTime !== "string") {
+        continue;
+      }
+      const booked = (row as { is_booked?: boolean | null }).is_booked;
+      byOffer.get(offerId)?.push({
+        start_time: startTime,
+        is_booked: booked === true,
+      });
+    }
+  }
+
+  return byOffer;
+}
+
+async function loadCleanupCandidates(admin: Admin): Promise<OfferRow[]> {
+  const offers: { id: string; status: string | null }[] = [];
   let statuses = CLEANUP_STATUSES;
 
   for (let page = 0; ; page += 1) {
     const result = await selectCandidatePage(admin, statuses, page * PAGE_SIZE);
     statuses = result.statuses;
-    rows.push(...result.rows);
+    offers.push(...result.rows);
 
     if (result.rows.length < PAGE_SIZE) {
-      return rows;
+      break;
     }
   }
+
+  const slots = await loadSlotsByOffer(
+    admin,
+    offers.map((offer) => offer.id),
+  );
+
+  return offers.map((offer) => ({
+    id: offer.id,
+    status: offer.status,
+    offer_slots: slots.get(offer.id) ?? [],
+  }));
 }
 
 async function markExpired(admin: Admin, ids: string[]) {
@@ -131,7 +184,7 @@ export async function runOfferExpiryJob(
   const admin = createAdminClient();
   const candidates = await loadCleanupCandidates(admin);
   const expiredIds = candidates
-    .filter((offer) => isOfferExpired(offer.offer_slots ?? [], now))
+    .filter((offer) => isOfferExpired(offer.offer_slots, now))
     .map((offer) => offer.id);
 
   if (options.dryRun) {
@@ -145,9 +198,40 @@ export async function runOfferExpiryJob(
   const statusUsed =
     expiredIds.length > 0 ? await markExpired(admin, expiredIds) : OFFER_STATUS_EXPIRED;
 
+  if (expiredIds.length > 0) {
+    console.info(
+      `Offer expiry: ${expiredIds.length} Angebot(e) auf '${statusUsed}' gesetzt.`,
+    );
+  }
+
   return {
     checked: candidates.length,
     expired_offer_ids: expiredIds,
     status_used: statusUsed,
   };
+}
+
+/**
+ * Fire-and-Forget im Hintergrund. Höchstens alle fünf Minuten, damit der
+ * Kunden-Feed nicht bei jedem Aufruf die ganze Offers-Tabelle scannt.
+ */
+export function scheduleOfferExpiry() {
+  const now = Date.now();
+  if (backgroundInFlight || now - lastBackgroundRun < BACKGROUND_INTERVAL_MS) {
+    return;
+  }
+
+  lastBackgroundRun = now;
+  backgroundInFlight = true;
+
+  void runOfferExpiryJob()
+    .catch((error) => {
+      console.error(
+        "Offer expiry failed:",
+        error instanceof Error ? error.message : error,
+      );
+    })
+    .finally(() => {
+      backgroundInFlight = false;
+    });
 }

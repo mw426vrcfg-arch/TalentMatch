@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireBusiness } from "@/lib/auth/require-business";
 import { requireCustomer } from "@/lib/auth/require-customer";
 import { createDispute } from "@/lib/disputes/store";
+import { sendAdminDisputeEmail } from "@/lib/mail/send-feedback";
 import { readId, readText, TEXT_LIMITS } from "@/lib/security/sanitize";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -75,7 +76,34 @@ async function fileDispute(reporterId: string, formData: FormData, path: string)
     return { error: message || "Meldung konnte nicht gespeichert werden." };
   }
 
+  let { data: reporter, error: reporterError } = await admin
+    .from("users")
+    .select("full_name, email, phone, role")
+    .eq("id", reporterId)
+    .maybeSingle();
+  if (reporterError && /phone|schema cache|does not exist/i.test(reporterError.message)) {
+    const retry = await admin.from("users").select("full_name, email, role").eq("id", reporterId).maybeSingle();
+    reporter = retry.data ? { ...retry.data, phone: null } : null;
+  }
+
+  try {
+    await sendAdminDisputeEmail({
+      reporterName: String(reporter?.full_name || ""),
+      reporterEmail: String(reporter?.email || ""),
+      reporterPhone: reporter?.phone ? String(reporter.phone) : null,
+      reporterRole: String(reporter?.role || ""),
+      reportedUserId: counterpart,
+      applicationId,
+      bookingId,
+      description,
+    });
+  } catch (mailError) {
+    console.error("Admin-Mail für Problem-Meldung fehlgeschlagen:", mailError);
+  }
+
   revalidatePath(path);
+  revalidatePath("/business/applications");
+  revalidatePath("/dashboard/applications");
   return { success: "Danke. Deine Meldung liegt beim Plattform-Admin." };
 }
 

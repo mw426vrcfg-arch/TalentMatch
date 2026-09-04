@@ -2,16 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { useT } from "@/components/i18n/i18n-provider";
+import { type MessageKey } from "@/lib/i18n/messages";
 
-const LINKS = [
-  { href: "/impressum", label: "Impressum" },
-  { href: "/agb", label: "AGB" },
-  { href: "/datenschutz", label: "Datenschutz" },
+const LINKS: { href: string; key: MessageKey }[] = [
+  { href: "/impressum", key: "settings.impressum" },
+  { href: "/agb", key: "settings.terms" },
+  { href: "/datenschutz", key: "settings.privacy" },
 ];
 
 export function ProfileLegalMenu() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const t = useT();
 
   useEffect(() => {
     function onPointer(event: MouseEvent) {
@@ -30,7 +34,7 @@ export function ProfileLegalMenu() {
         onClick={() => setOpen((value) => !value)}
         className="ui-icon-btn"
         aria-expanded={open}
-        aria-label="Einstellungen und Rechtstexte"
+        aria-label={t("settings.aria")}
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
           <circle cx="12" cy="12" r="3.2" />
@@ -41,9 +45,14 @@ export function ProfileLegalMenu() {
         </svg>
       </button>
       {open ? (
-        <div className="absolute right-0 z-50 mt-3 w-56 overflow-hidden rounded-2xl border border-white/20 bg-white/80 p-2 shadow-xl backdrop-blur-md">
+        <div className="absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-[22px] border border-white/25 bg-white/80 p-2 shadow-[0_24px_80px_rgba(15,15,20,0.14)] backdrop-blur-2xl ui-sheet">
           <p className="px-3 py-2 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">
-            Rechtliches
+            {t("settings.title")}
+          </p>
+          <LanguageSwitcher />
+          <div className="mx-2 mb-2 border-t border-white/30" />
+          <p className="px-3 py-2 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">
+            {t("settings.legal")}
           </p>
           {LINKS.map((link) => (
             <Link
@@ -51,7 +60,7 @@ export function ProfileLegalMenu() {
               href={link.href}
               className="block rounded-xl px-3 py-2.5 text-sm text-neutral-800 transition-all duration-300 ease-out hover:bg-white/90 hover:scale-[1.015] active:scale-95"
             >
-              {link.label}
+              {t(link.key)}
             </Link>
           ))}
         </div>

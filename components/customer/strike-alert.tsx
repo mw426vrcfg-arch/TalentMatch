@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { loadMyStrikeStatus } from "@/app/dashboard/strike-actions";
+import { useT } from "@/components/i18n/i18n-provider";
 import { createClient } from "@/lib/supabase/client";
 
 function dismissalKey(userId: string, count: number) {
@@ -16,6 +17,7 @@ export function StrikeAlert({
   userId: string;
   initialCount: number;
 }) {
+  const t = useT();
   const router = useRouter();
   const [count, setCount] = useState(initialCount);
   const [dismissed, setDismissed] = useState(false);
@@ -111,19 +113,17 @@ export function StrikeAlert({
         type="button"
         onClick={dismiss}
         className="ui-icon-btn absolute right-3 top-3 h-8 w-8 text-neutral-400 hover:text-neutral-900"
-        aria-label="Warnung schließen"
+        aria-label={t("common.closeWarning")}
       >
         <span className="text-lg leading-none" aria-hidden>
           ×
         </span>
       </button>
       <p className="text-sm font-semibold text-ink">
-        Achtung: Du hast {count} von 3 Strikes erhalten!
+        {t("strikes.banner", { count })}
       </p>
       <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-        {count >= 3
-          ? "Dein Zugang wird jetzt gesperrt."
-          : "Beim dritten Strike wird dein Login dauerhaft gesperrt."}
+        {count >= 3 ? t("strikes.locked") : t("strikes.warning2")}
       </p>
     </div>
   );

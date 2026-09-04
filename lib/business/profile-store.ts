@@ -1,5 +1,7 @@
+import { persistGender } from "@/lib/profile/gender";
 import { sanitizeUuid } from "@/lib/security/sanitize";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { missingColumnFromError } from "@/lib/supabase/flexible-write";
 
 export type BusinessProfile = {
   id: string;
@@ -9,11 +11,13 @@ export type BusinessProfile = {
   address: string | null;
   phone: string | null;
   logo_url: string | null;
+  contact_gender: "female" | "male" | "diverse" | null;
+  in_app_push: boolean;
 };
 
 type Admin = ReturnType<typeof createAdminClient>;
 
-const FIELD_ALIASES: Record<keyof Omit<BusinessProfile, "id">, string[]> = {
+const FIELD_ALIASES: Record<keyof Omit<BusinessProfile, "id" | "contact_gender" | "in_app_push">, string[]> = {
   business_name: ["business_name", "name", "salon_name"],
   location: ["location", "city", "ort"],
   description: ["description", "bio", "about"],
@@ -43,6 +47,8 @@ const DEFAULT_COLUMNS = [
   "phone",
   "logo_url",
   "profile_picture_url",
+  "gender",
+  "contact_gender",
 ];
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -66,11 +72,22 @@ function firstString(row: Record<string, unknown>, keys: string[]) {
 }
 
 function readPhoneColumn(row: Record<string, unknown>) {
-  if (!Object.prototype.hasOwnProperty.call(row, "phone") || row.phone == null) {
-    return null;
+  return firstString(row, FIELD_ALIASES.phone);
+}
+
+function readContactGender(row: Record<string, unknown>) {
+  const raw = firstString(row, ["contact_gender", "gender"]);
+  if (raw === "female" || raw === "male" || raw === "diverse") {
+    return raw;
   }
-  const value = String(row.phone).trim();
-  return value || null;
+  return null;
+}
+
+function readPushEnabled(row: Record<string, unknown>) {
+  if (!Object.prototype.hasOwnProperty.call(row, "in_app_push")) {
+    return true;
+  }
+  return row.in_app_push !== false;
 }
 
 export function mapBusinessRow(row: unknown, userId?: string): BusinessProfile | null {
@@ -92,6 +109,8 @@ export function mapBusinessRow(row: unknown, userId?: string): BusinessProfile |
     address: firstString(data, FIELD_ALIASES.address),
     phone: readPhoneColumn(data),
     logo_url: firstString(data, FIELD_ALIASES.logo_url),
+    contact_gender: readContactGender(data),
+    in_app_push: readPushEnabled(data),
   };
 }
 
@@ -196,9 +215,17 @@ export async function loadBusinessProfileByUserId(admin: Admin, userId: string) 
     throw new Error(error.message);
   }
 
+  const mapped = mapBusinessRow(row, userId);
+  if (!mapped) {
+    return {
+      profile: null as BusinessProfile | null,
+      columns: row ? Object.keys(row as object) : await probeBusinessProfileColumns(admin),
+    };
+  }
+
   return {
-    profile: mapBusinessRow(row, userId),
-    columns: row ? Object.keys(row) : await probeBusinessProfileColumns(admin),
+    profile: { ...mapped, phone: await loadPhoneFallback(admin, userId, mapped.phone) },
+    columns: row ? Object.keys(row as object) : await probeBusinessProfileColumns(admin),
   };
 }
 
@@ -275,6 +302,7 @@ function payloadForColumns(
       return;
     }
     if (logical === "phone") {
+      writeAliasedValue(payload, columnSet, FIELD_ALIASES.phone, values.phone, ["phone"]);
       return;
     }
     const column = FIELD_ALIASES[logical].find((name) => columnSet.has(name));
@@ -283,25 +311,17 @@ function payloadForColumns(
     }
   });
 
-  payload.phone = values.phone;
-
   return payload;
 }
 
 function isMissingColumnError(message: string) {
-  return /could not find the '([^']+)' column|schema cache/i.test(message);
+  return Boolean(missingColumnFromError(message)) || /schema cache/i.test(message);
 }
 
 function stripMissingColumn(payload: Record<string, unknown>, message: string) {
-  const match = message.match(/'([^']+)' column/i);
-  if (!match) {
-    return false;
-  }
-  if (match[1] === "phone") {
-    return false;
-  }
-  if (match[1] in payload) {
-    delete payload[match[1]];
+  const column = missingColumnFromError(message);
+  if (column && column in payload) {
+    delete payload[column];
     return true;
   }
   return false;
@@ -310,6 +330,13 @@ function stripMissingColumn(payload: Record<string, unknown>, message: string) {
 function syncIdentity(payload: Record<string, unknown>, userId: string) {
   payload.id = userId;
   payload.user_id = userId;
+}
+
+async function persistUserPhone(admin: Admin, userId: string, phone: string | null) {
+  const { error } = await admin.from("users").update({ phone }).eq("id", userId);
+  if (error && !isMissingColumnError(error.message)) {
+    throw new Error(error.message);
+  }
 }
 
 async function persistBusinessPhone(
@@ -322,10 +349,26 @@ async function persistBusinessPhone(
   if (!byId.error) {
     return;
   }
-  const byUser = await admin.from("business_profiles").update({ phone }).eq("user_id", userId);
-  if (byUser.error) {
-    throw new Error(byId.error.message);
+  if (isMissingColumnError(byId.error.message)) {
+    return;
   }
+  const byUser = await admin.from("business_profiles").update({ phone }).eq("user_id", userId);
+  if (!byUser.error || isMissingColumnError(byUser.error.message)) {
+    return;
+  }
+  throw new Error(byId.error.message);
+}
+
+async function loadPhoneFallback(admin: Admin, userId: string, current: string | null) {
+  if (current) {
+    return current;
+  }
+  const { data, error } = await admin.from("users").select("phone").eq("id", userId).maybeSingle();
+  if (error || !data) {
+    return current;
+  }
+  const value = typeof data.phone === "string" ? data.phone.trim() : "";
+  return value || current;
 }
 
 async function finishSavedProfile(
@@ -333,13 +376,39 @@ async function finishSavedProfile(
   userId: string,
   profileId: string,
   phone: string | null,
+  gender?: "female" | "male" | "diverse" | null,
 ) {
+  await persistUserPhone(admin, userId, phone);
   await persistBusinessPhone(admin, profileId, userId, phone);
+  if (gender !== undefined) {
+    await persistGender(admin, {
+      table: "business_profiles",
+      matchColumn: "id",
+      matchValue: profileId,
+      gender,
+    });
+    await persistGender(admin, {
+      table: "business_profiles",
+      matchColumn: "user_id",
+      matchValue: userId,
+      gender,
+    });
+  }
   const { profile } = await loadBusinessProfileByUserId(admin, userId);
   if (!profile) {
-    return { id: profileId, business_name: "", location: "", description: null, address: null, phone, logo_url: null };
+    return {
+      id: profileId,
+      business_name: "",
+      location: "",
+      description: null,
+      address: null,
+      phone,
+      logo_url: null,
+      contact_gender: gender ?? null,
+      in_app_push: true,
+    };
   }
-  return { ...profile, phone: profile.phone ?? phone };
+  return { ...profile, phone: profile.phone ?? phone, contact_gender: profile.contact_gender ?? gender ?? null };
 }
 
 export async function saveBusinessProfile(
@@ -353,6 +422,7 @@ export async function saveBusinessProfile(
     address: string | null;
     phone: string | null;
     logo_url: string | null;
+    gender?: "female" | "male" | "diverse" | null;
   },
 ) {
   const loaded = await loadBusinessProfileByUserId(admin, input.userId);
@@ -397,6 +467,7 @@ export async function saveBusinessProfile(
           input.userId,
           String((data as { id?: string }).id ?? existingId),
           input.phone,
+          input.gender,
         );
       }
 
@@ -408,7 +479,7 @@ export async function saveBusinessProfile(
           .select("*")
           .maybeSingle();
         if (!byUser.error && byUser.data) {
-          return finishSavedProfile(admin, input.userId, String((byUser.data as { id?: string }).id), input.phone);
+          return finishSavedProfile(admin, input.userId, String((byUser.data as { id?: string }).id), input.phone, input.gender);
         }
       } else if (error) {
         if (isMissingColumnError(error.message) && stripMissingColumn(payload, error.message)) {
@@ -428,7 +499,7 @@ export async function saveBusinessProfile(
       .single();
 
     if (!error && data) {
-      return finishSavedProfile(admin, input.userId, String((data as { id?: string }).id ?? input.userId), input.phone);
+      return finishSavedProfile(admin, input.userId, String((data as { id?: string }).id ?? input.userId), input.phone, input.gender);
     }
     if (error && isMissingColumnError(error.message) && stripMissingColumn(payload, error.message)) {
       syncIdentity(payload, input.userId);
@@ -442,7 +513,7 @@ export async function saveBusinessProfile(
         .select("*")
         .maybeSingle();
       if (!updateError && updated) {
-        return finishSavedProfile(admin, input.userId, String((updated as { id?: string }).id ?? input.userId), input.phone);
+        return finishSavedProfile(admin, input.userId, String((updated as { id?: string }).id ?? input.userId), input.phone, input.gender);
       }
       const { data: byUser, error: byUserError } = await admin
         .from("business_profiles")
@@ -451,7 +522,7 @@ export async function saveBusinessProfile(
         .select("*")
         .maybeSingle();
       if (!byUserError && byUser) {
-        return finishSavedProfile(admin, input.userId, String((byUser as { id?: string }).id ?? input.userId), input.phone);
+        return finishSavedProfile(admin, input.userId, String((byUser as { id?: string }).id ?? input.userId), input.phone, input.gender);
       }
     }
     throw new Error(error?.message ?? "Profil konnte nicht gespeichert werden.");

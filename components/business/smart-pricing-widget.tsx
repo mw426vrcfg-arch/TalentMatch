@@ -1,5 +1,8 @@
 "use client";
 
+import { useLocale, useT } from "@/components/i18n/i18n-provider";
+import { intlLocale } from "@/lib/i18n/config";
+
 function parseAmount(value: string) {
   const amount = Number(value.replace(",", ".").trim());
   return Number.isFinite(amount) ? amount : NaN;
@@ -24,6 +27,8 @@ export function SmartPricingWidget({
   normalPrice: string;
   dealPrice: string;
 }) {
+  const t = useT();
+  const locale = useLocale();
   const percent = discountPercent(normalPrice, dealPrice);
   if (percent == null) {
     return null;
@@ -36,9 +41,9 @@ export function SmartPricingWidget({
   return (
     <aside className="overflow-hidden rounded-[22px] border border-white/30 bg-white/60 shadow-[0_12px_32px_rgba(15,15,20,0.05)] backdrop-blur-md">
       <div className="flex items-center justify-between gap-3 px-4 py-3">
-        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">Smart Pricing</p>
+        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">{t("pricing.kicker")}</p>
         <p className="font-serif text-2xl leading-none text-ink">
-          {rounded.toLocaleString("de-CH", { maximumFractionDigits: 1 })}%
+          {rounded.toLocaleString(intlLocale(locale), { maximumFractionDigits: 1 })}%
         </p>
       </div>
       <div className="h-1 bg-white/40">
@@ -51,12 +56,12 @@ export function SmartPricingWidget({
       </div>
       {topDeal ? (
         <p className="px-4 py-3 text-sm leading-relaxed text-emerald-800">
-          🔥 Top-Deal: Hohe Buchungschance innerhalb von 30 Minuten
+          {t("pricing.topDeal")}
         </p>
       ) : null}
       {lowDeal ? (
         <p className="px-4 py-3 text-sm leading-relaxed text-amber-800">
-          💡 Tipp: Erhöhe den Rabatt um 10%, um schneller passende Modelle zu finden.
+          {t("pricing.lowDeal")}
         </p>
       ) : null}
     </aside>

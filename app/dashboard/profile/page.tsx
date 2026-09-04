@@ -1,15 +1,16 @@
-import { ProfileLegalMenu } from "@/components/legal/profile-legal-menu";
 import { HairPortfolioEditor } from "@/components/customer/hair-portfolio";
 import { CustomerProfileForm } from "@/components/customer/customer-profile-form";
 import { CustomerShell } from "@/components/customer/customer-shell";
 import { LoyaltyBadge } from "@/components/customer/loyalty-badge";
 import { ReputationBoard } from "@/components/customer/reputation-board";
+import { SettingsHub } from "@/components/customer/settings-hub";
 import { ReceivedReviews } from "@/components/ratings/received-reviews";
 import { requireCustomer } from "@/lib/auth/require-customer";
 import { resolveAvatarUrl } from "@/lib/customer/images";
 import { loadHairPortfolio } from "@/lib/customer/portfolio";
 import { loadCustomerProfile } from "@/lib/customer/profile-store";
 import { EMPTY_TREATMENT_PASS } from "@/lib/customer/treatment-pass";
+import { PageIntro, T } from "@/components/i18n/t";
 import { loadCustomerLoyalty } from "@/lib/loyalty/store";
 import { loadRatingAverages, loadReceivedReviews } from "@/lib/ratings/store";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -45,6 +46,8 @@ export default async function CustomerProfilePage({
     treatment_pass: loaded.profile?.treatment_pass ?? EMPTY_TREATMENT_PASS,
     beauty_points: loaded.profile?.beauty_points ?? 0,
     member_level: loaded.profile?.member_level ?? "Bronze",
+    gender: loaded.profile?.gender ?? null,
+    in_app_push: loaded.profile?.in_app_push ?? true,
   };
 
   const loyalty = await loadCustomerLoyalty(admin, user.id);
@@ -56,32 +59,29 @@ export default async function CustomerProfilePage({
 
   return (
     <CustomerShell
-      title="Profil"
+      titleKey="nav.profile"
       userName={customerProfile.full_name}
       signedIn
-      headerAction={<ProfileLegalMenu />}
     >
-      <div className="mb-10 max-w-2xl">
-        <p className="ui-kicker">Kundenprofil</p>
-        <h1 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">Dein Profil</h1>
-        <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-          Name, Bio, Haarprofil und Foto. Dein Strike-Stand bleibt nur für dich und angenommene Termine sichtbar.
-        </p>
-      </div>
+      <PageIntro kicker="profile.kicker" title="profile.title" description="profile.intro" />
 
       {saved === "1" ? (
-        <p className="ui-alert-ok mb-8">Profil gespeichert.</p>
+        <p className="ui-alert-ok mb-8">
+          <T k="profile.saved" />
+        </p>
       ) : null}
       {portfolio === "1" ? (
-        <p className="ui-alert-ok mb-8">Haar-Portfolio aktualisiert.</p>
+        <p className="ui-alert-ok mb-8">
+          <T k="profile.portfolioUpdated" />
+        </p>
       ) : null}
       {missingColumns.length > 0 ? (
         <div className="ui-alert-error mb-8">
-          <p className="font-medium">Diese Angaben wurden nicht gespeichert.</p>
+          <p className="font-medium">
+            <T k="profile.missingColumnsTitle" />
+          </p>
           <p className="mt-1">
-            In der Tabelle <code>customer_profiles</code> fehlen die Spalten{" "}
-            {missingColumns.join(", ")}. Führe <code>customer_profile_columns.sql</code> im
-            Supabase SQL-Editor aus, danach bleiben die Werte erhalten.
+            <T k="profile.missingColumns" values={{ columns: missingColumns.join(", ") }} />
           </p>
         </div>
       ) : null}
@@ -98,7 +98,12 @@ export default async function CustomerProfilePage({
         </div>
       </div>
 
-      <section className="ui-card max-w-xl p-5 sm:p-8">
+      <SettingsHub
+        gender={customerProfile.gender ?? ""}
+        pushEnabled={customerProfile.in_app_push}
+      />
+
+      <section className="ui-card mt-10 max-w-xl p-5 sm:p-8">
         <CustomerProfileForm profile={customerProfile} />
       </section>
 

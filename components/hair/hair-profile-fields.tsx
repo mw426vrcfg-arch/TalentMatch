@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { choiceChipClass } from "@/components/hair/choice-chip";
+import { useT } from "@/components/i18n/i18n-provider";
 import { HAIR_CHEMICAL, HAIR_LENGTH, HAIR_STRUCTURE, type HairProfile } from "@/lib/hair/criteria";
+import { type MessageKey } from "@/lib/i18n/messages";
 
 function TagGroup({
   legend,
@@ -19,6 +21,7 @@ function TagGroup({
   options: readonly { value: string; label: string }[];
   optional?: boolean;
 }) {
+  const t = useT();
   return (
     <fieldset>
       <legend className="mb-2 text-sm text-ink-soft">{legend}</legend>
@@ -33,7 +36,7 @@ function TagGroup({
               onChange={() => onChange("")}
               className="sr-only"
             />
-            <span className={choiceChipClass(value === "")}>Egal</span>
+            <span className={choiceChipClass(value === "")}>{t("hair.any")}</span>
           </label>
         ) : null}
         {options.map((option) => {
@@ -48,7 +51,7 @@ function TagGroup({
                 onChange={() => onChange(option.value)}
                 className="sr-only"
               />
-              <span className={choiceChipClass(active)}>{option.label}</span>
+              <span className={choiceChipClass(active)}>{t(`hair.${option.value}` as MessageKey)}</span>
             </label>
           );
         })}
@@ -64,6 +67,7 @@ export function HairProfileFields({
   profile?: HairProfile | null;
   optional?: boolean;
 }) {
+  const t = useT();
   const [structure, setStructure] = useState(profile?.structure ?? "");
   const [length, setLength] = useState(profile?.length ?? "");
   const [chemical, setChemical] = useState(profile?.chemical ?? "");
@@ -77,10 +81,10 @@ export function HairProfileFields({
   return (
     <div className="space-y-4 rounded-[22px] border border-white/30 bg-white/55 p-4">
       <p className="text-sm font-medium text-ink">
-        {optional ? "Wunsch-Kriterien für das Modell (optional)" : "Dein Haarprofil"}
+        {optional ? t("hair.wantedTitle") : t("hair.title")}
       </p>
       <TagGroup
-        legend="Haarstruktur"
+        legend={t("hair.structure")}
         name={optional ? "wanted_hair_structure" : "hair_structure"}
         value={structure}
         onChange={setStructure}
@@ -88,7 +92,7 @@ export function HairProfileFields({
         optional={optional}
       />
       <TagGroup
-        legend="Haarlänge"
+        legend={t("hair.length")}
         name={optional ? "wanted_hair_length" : "hair_length"}
         value={length}
         onChange={setLength}
@@ -96,7 +100,7 @@ export function HairProfileFields({
         optional={optional}
       />
       <TagGroup
-        legend="Chemische Vorbehandlung"
+        legend={t("hair.chemical")}
         name={optional ? "wanted_hair_chemical" : "hair_chemical"}
         value={chemical}
         onChange={setChemical}

@@ -5,6 +5,8 @@ import { CustomerShell } from "@/components/customer/customer-shell";
 import { requireCustomer } from "@/lib/auth/require-customer";
 import { formatChf, formatSlot } from "@/lib/offers/format";
 import { VipWaitNotice } from "@/components/offers/vip-wait-notice";
+import { T } from "@/components/i18n/t";
+import { LocalizedText } from "@/components/i18n/localized-text";
 import { loadOfferAccess } from "@/lib/loyalty/offer-access";
 import { loadOfferSlot } from "@/lib/offers/load-active-offers";
 
@@ -35,14 +37,16 @@ export default async function ApplyPage({
 
   if (!access.visible) {
     return (
-      <CustomerShell title="Apply" userName={profile.full_name} signedIn>
+      <CustomerShell titleKey="nav.apply" userName={profile.full_name} signedIn>
         <Link href={`/offers/${offer.id}`} className="ui-link">
-          ← Zurück zum Angebot
+          ← <T k="offer.backToOffer" />
         </Link>
         <section className="ui-card mt-8 max-w-xl p-5 sm:p-8">
-          <h1 className="font-serif text-4xl text-ink">VIP Early Access</h1>
+          <h1 className="font-serif text-4xl text-ink">
+            <T k="offer.vipTitle" />
+          </h1>
           <p className="mt-3 text-sm text-ink-soft">
-            Dieses Angebot ist für Bronze noch gesperrt. Silber und Gold sehen es sofort.
+            <T k="offer.vipLockedBody" />
           </p>
           <div className="mt-6">
             <VipWaitNotice unlockAt={access.unlockAt} />
@@ -57,20 +61,22 @@ export default async function ApplyPage({
 
   if (booked) {
     return (
-      <CustomerShell title="Apply" userName={profile.full_name} signedIn>
+      <CustomerShell titleKey="nav.apply" userName={profile.full_name} signedIn>
         <Link href={`/offers/${offer.id}`} className="ui-link">
-          ← Zurück zum Angebot
+          ← <T k="offer.backToOffer" />
         </Link>
         <section className="ui-card mt-8 max-w-xl p-5 sm:p-8">
-          <p className="ui-kicker">Slot</p>
-          <h1 className="mt-3 font-serif text-4xl text-ink">Ausgebucht</h1>
+          <p className="ui-kicker">
+            <T k="offer.slot" />
+          </p>
+          <h1 className="mt-3 font-serif text-4xl text-ink">
+            <T k="offer.bookedTitle" />
+          </h1>
           <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-            {formatSlot(slot.start_time)} ist für andere Kunden nicht mehr verfügbar.
-            Dieser Slot wurde angenommen oder bestätigt. Wähle eine andere Uhrzeit desselben
-            Angebots.
+            <T k="offer.bookedBody" values={{ slot: formatSlot(slot.start_time) }} />
           </p>
           <Link href={`/offers/${offer.id}`} className="ui-btn-primary mt-6">
-            Andere Slots ansehen
+            <T k="offer.otherSlots" />
           </Link>
         </section>
       </CustomerShell>
@@ -78,55 +84,76 @@ export default async function ApplyPage({
   }
 
   return (
-    <CustomerShell title="Apply" userName={profile.full_name} signedIn>
+    <CustomerShell titleKey="nav.apply" userName={profile.full_name} signedIn>
       <Link href={`/offers/${offer.id}`} className="ui-link">
-        ← Zurück zum Angebot
+        ← <T k="offer.backToOffer" />
       </Link>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <section className="ui-card p-5 sm:p-8">
-          <p className="ui-kicker">Phase 3 · Apply</p>
-          <h1 className="mt-3 font-serif text-4xl text-ink">Bewerbung</h1>
+          <p className="ui-kicker">
+            <T k="applications.applyKicker" />
+          </p>
+          <h1 className="mt-3 font-serif text-4xl text-ink">
+            <T k="applications.applyTitle" />
+          </h1>
           <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-            Nicht buchen — bewerben. Der Salon entscheidet anhand deiner Bilder und Notizen.
+            <T k="applications.applyIntro" />
           </p>
 
           <dl className="mt-8 space-y-4 text-sm">
             <div>
-              <dt className="ui-kicker">Angebot</dt>
+              <dt className="ui-kicker">
+                <T k="offer.offer" />
+              </dt>
               <dd className="mt-1 font-medium text-ink">{offer.title}</dd>
             </div>
             <div>
-              <dt className="ui-kicker">Partner</dt>
+              <dt className="ui-kicker">
+                <T k="offer.partner" />
+              </dt>
               <dd className="mt-1 text-ink">
                 {offer.partner_name}
-                {offer.region ? ` · ${offer.region}` : ""}
+                {offer.region ? (
+                  <>
+                    {" · "}
+                    <LocalizedText text={offer.region} />
+                  </>
+                ) : null}
               </dd>
             </div>
             <div>
-              <dt className="ui-kicker">Preis</dt>
+              <dt className="ui-kicker">
+                <T k="offer.price" />
+              </dt>
               <dd className="mt-1 text-ink">
                 {formatChf(offer.discount_price)}{" "}
                 <span className="text-ink-soft line-through">{formatChf(offer.normal_price)}</span>
               </dd>
             </div>
             <div>
-              <dt className="ui-kicker">Zeit</dt>
+              <dt className="ui-kicker">
+                <T k="offer.time" />
+              </dt>
               <dd className="mt-1 text-ink">{formatSlot(slot.start_time)}</dd>
             </div>
             <div>
-              <dt className="ui-kicker">Bedingungen</dt>
+              <dt className="ui-kicker">
+                <T k="offer.conditions" />
+              </dt>
               <dd className="mt-1 whitespace-pre-wrap text-ink">
-                {offer.requirements || offer.description || "Keine besonderen Bedingungen."}
+                {offer.requirements || offer.description || <T k="offer.noConditions" />}
               </dd>
             </div>
           </dl>
         </section>
 
         <section className="ui-card p-5 sm:p-8">
-          <h2 className="font-serif text-3xl text-ink">Hair Images & Notes</h2>
+          <h2 className="font-serif text-3xl text-ink">
+            <T k="applications.hairNotes" />
+          </h2>
           <p className="mt-2 text-sm text-ink-soft">
-            Nach Submit ist deine Bewerbung <strong className="text-ink">pending</strong>.
+            <T k="applications.applyPending" />
           </p>
           <div className="mt-8">
             <ApplyForm offerId={offer.id} slotId={slot.id} />

@@ -31,6 +31,7 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAuthPage = path === "/login" || path === "/register";
+  const isPasswordReset = path === "/reset-password";
   const isProtected =
     path.startsWith("/dashboard") ||
     path.startsWith("/business") ||
@@ -45,6 +46,7 @@ export async function updateSession(request: NextRequest) {
     !role &&
     (provider === "google" || provider === "apple") &&
     path !== "/auth/role" &&
+    path !== "/reset-password" &&
     !path.startsWith("/auth/callback")
   ) {
     const roleUrl = request.nextUrl.clone();
@@ -81,6 +83,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (isPasswordReset) {
+    return response;
+  }
+
   if (user && isAuthPage) {
     const role = (user.user_metadata?.role as string | undefined) ?? "customer";
     const redirectUrl = request.nextUrl.clone();
@@ -103,7 +109,11 @@ export async function updateSession(request: NextRequest) {
       inboxUrl.search = "";
       return NextResponse.redirect(inboxUrl);
     }
-    if (path.startsWith("/dashboard") || path.startsWith("/offers")) {
+    if (
+      path.startsWith("/dashboard") ||
+      path === "/offers" ||
+      /\/offers\/[^/]+\/apply(?:\/|$)/.test(path)
+    ) {
       const salonUrl = request.nextUrl.clone();
       salonUrl.pathname = "/business/dashboard";
       salonUrl.search = "";

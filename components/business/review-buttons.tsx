@@ -5,10 +5,13 @@ import {
   reviewApplicationAction,
   type ReviewState,
 } from "@/app/business/review-actions";
+import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 
 const initialState: ReviewState = {};
 
 export function ReviewButtons({ applicationId }: { applicationId: string }) {
+  const t = useT();
+  const localize = useLocalize();
   const [state, formAction, pending] = useActionState(
     reviewApplicationAction,
     initialState,
@@ -18,7 +21,7 @@ export function ReviewButtons({ applicationId }: { applicationId: string }) {
     <div className="space-y-3">
       {state.error && (
         <p className="ui-alert-error">
-          {state.error}
+          {localize(state.error)}
         </p>
       )}
       <form action={formAction} className="flex flex-wrap gap-3">
@@ -30,7 +33,7 @@ export function ReviewButtons({ applicationId }: { applicationId: string }) {
           disabled={pending}
           className="ui-btn-primary"
         >
-          {pending ? "Wird gespeichert…" : "Akzeptieren"}
+          {pending ? t("actions.saving") : t("actions.accept")}
         </button>
         <button
           type="submit"
@@ -39,7 +42,7 @@ export function ReviewButtons({ applicationId }: { applicationId: string }) {
           disabled={pending}
           className="ui-btn-danger"
         >
-          Ablehnen
+          {t("actions.decline")}
         </button>
       </form>
     </div>

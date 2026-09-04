@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBusiness } from "@/lib/auth/require-business";
 import { createNotification } from "@/lib/notifications/create";
+import { sendAdminNoShowEmail } from "@/lib/mail/send-feedback";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { banCustomerLogin, getStrikeRestriction } from "@/lib/strikes/restriction";
 import { readId } from "@/lib/security/sanitize";
@@ -17,7 +18,7 @@ export async function reportNoShowAction(
   _prev: NoShowState,
   formData: FormData,
 ): Promise<NoShowState> {
-  const { business } = await requireBusiness();
+  const { user, business } = await requireBusiness();
 
   if (!business) {
     return { error: "Kein Salonprofil gefunden." };
@@ -86,6 +87,24 @@ export async function reportNoShowAction(
   const restriction = await getStrikeRestriction(application.customer_id as string);
   const count = restriction.count;
 
+  try {
+    const { data: salonUser } = await admin
+      .from("users")
+      .select("email")
+      .eq("id", user.id)
+      .maybeSingle();
+    await sendAdminNoShowEmail({
+      salonName: business.business_name || "",
+      salonEmail: String(salonUser?.email || ""),
+      bookingId: booking.id,
+      applicationId: String(application.id ?? ""),
+      customerId: String(application.customer_id ?? ""),
+      strikeCount: count,
+    });
+  } catch (mailError) {
+    console.error("Admin-Mail für No-Show fehlgeschlagen:", mailError);
+  }
+
   if (count >= 3) {
     await banCustomerLogin(application.customer_id as string);
     await createNotification(admin, {
@@ -117,6 +136,8 @@ export async function reportNoShowAction(
   }
 
   revalidatePath("/business/dashboard");
+  revalidatePath("/business/applications");
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/applications");
   redirect(`/business/dashboard?noshow=${count}`);
 }

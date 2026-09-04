@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { useT } from "@/components/i18n/i18n-provider";
 
 export type AppTabItem = {
   href: string;
@@ -21,11 +22,12 @@ function isActive(pathname: string, item: AppTabItem) {
 
 export function AppTabBar({ items }: { items: AppTabItem[] }) {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <nav
       className="ui-tabbar pb-[env(safe-area-inset-bottom)]"
-      aria-label="App"
+      aria-label={t("nav.app")}
     >
       <ul className="mx-auto grid max-w-lg grid-flow-col auto-cols-fr px-2 pt-1.5">
         {items.map((item) => {

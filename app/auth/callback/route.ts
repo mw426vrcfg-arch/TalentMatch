@@ -37,9 +37,8 @@ export async function GET(request: Request) {
   const existing = await getProfile(user.id);
 
   if (existing) {
-    return NextResponse.redirect(
-      `${origin}${next || redirectPathForRole(existing.role)}`,
-    );
+    const destination = next === "/reset-password" ? "/reset-password" : next || redirectPathForRole(existing.role);
+    return NextResponse.redirect(`${origin}${destination}`);
   }
 
   // E-Mail-Registrierung: die Rolle steckt bereits in den Metadaten.

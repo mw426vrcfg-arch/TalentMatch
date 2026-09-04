@@ -1,16 +1,11 @@
 import { filterBlockedOffers, loadBlockedSalons, NO_BLOCKED_SALONS } from "@/lib/blacklist/store";
+import { resolveBusinessImageUrl } from "@/lib/business/images";
 import { partnerSalonLabel, regionLabel } from "@/lib/offers/anonymize";
 import { loadActiveOffers, type BrowseOffer } from "@/lib/offers/load-active-offers";
+import { isUrgentFlag } from "@/lib/offers/urgent-flag";
+import { scheduleOfferExpiry } from "@/lib/offers/expire";
+import type { InspirationTile } from "@/lib/inspiration/types";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-export type InspirationTile = {
-  id: string;
-  before_url: string | null;
-  after_url: string | null;
-  region: string;
-  partner_name: string;
-  offer: BrowseOffer | null;
-};
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object") {
@@ -20,12 +15,17 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 export async function loadInspirationFeed(customerId?: string | null): Promise<InspirationTile[]> {
+  scheduleOfferExpiry();
   const admin = createAdminClient();
   const blocked = customerId ? await loadBlockedSalons(customerId) : NO_BLOCKED_SALONS;
   const offers = filterBlockedOffers(await loadActiveOffers(), blocked);
   const offerBySalon = new Map<string, BrowseOffer>();
   for (const offer of offers) {
-    if (offer.salon_user_id && !offerBySalon.has(offer.salon_user_id)) {
+    if (!offer.salon_user_id) {
+      continue;
+    }
+    const current = offerBySalon.get(offer.salon_user_id);
+    if (!current || (isUrgentFlag(offer.is_urgent) && !isUrgentFlag(current.is_urgent))) {
       offerBySalon.set(offer.salon_user_id, offer);
     }
   }
@@ -46,7 +46,7 @@ export async function loadInspirationFeed(customerId?: string | null): Promise<I
     pushTile({
       id: `offer-${offer.id}`,
       before_url: null,
-      after_url: offer.image_url,
+      after_url: resolveBusinessImageUrl(offer.image_url),
       region: offer.region,
       partner_name: offer.partner_name,
       offer,
@@ -70,8 +70,8 @@ export async function loadInspirationFeed(customerId?: string | null): Promise<I
         continue;
       }
       const offer = offerBySalon.get(salonUserId) ?? null;
-      const after = String(record.after_url ?? "");
-      const before = String(record.before_url ?? "");
+      const after = resolveBusinessImageUrl(String(record.after_url ?? "")) ?? "";
+      const before = resolveBusinessImageUrl(String(record.before_url ?? "")) ?? "";
       if (!after && !before) {
         continue;
       }
@@ -104,8 +104,8 @@ export async function loadInspirationFeed(customerId?: string | null): Promise<I
         continue;
       }
       const offer = offerBySalon.get(salonUserId) ?? null;
-      const after = String(record.after_url ?? "");
-      const before = String(record.before_url ?? "");
+      const after = resolveBusinessImageUrl(String(record.after_url ?? "")) ?? "";
+      const before = resolveBusinessImageUrl(String(record.before_url ?? "")) ?? "";
       if (!after) {
         continue;
       }

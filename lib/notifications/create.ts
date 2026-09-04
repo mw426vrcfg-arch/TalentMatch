@@ -1,5 +1,14 @@
 import { sanitizeLine, sanitizeMultiline, TEXT_LIMITS } from "@/lib/security/sanitize";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  mapNotificationRow,
+  NOTIFICATION_COLUMNS,
+  NOTIFICATION_COLUMNS_BASIC,
+  type NotificationRow,
+} from "@/lib/notifications/rows";
+
+export type { NotificationRow } from "@/lib/notifications/rows";
+export { mapNotificationRow, mergeNotificationLists, NOTIFICATION_COLUMNS } from "@/lib/notifications/rows";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -13,37 +22,6 @@ export type NotificationType =
   | "swap_requested"
   | "swap_accepted"
   | "swap_rejected";
-
-export type NotificationRow = {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-};
-
-const NOTIFICATION_COLUMNS = "id, type, title, message, is_read, created_at";
-
-function mapNotificationRow(value: unknown): NotificationRow | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  const row = value as Record<string, unknown>;
-  if (typeof row.id !== "string") {
-    return null;
-  }
-
-  return {
-    id: row.id,
-    type: String(row.type ?? ""),
-    title: String(row.title ?? ""),
-    message: String(row.message ?? ""),
-    is_read: row.is_read === true,
-    created_at: String(row.created_at ?? new Date().toISOString()),
-  };
-}
 
 export async function createNotification(
   admin: AdminClient,
@@ -103,19 +81,31 @@ export async function createNotification(
 export async function loadNotificationsForUser(userId: string) {
   try {
     const admin = createAdminClient();
-    const { data, error } = await admin
+    const first = await admin
       .from("notifications")
       .select(NOTIFICATION_COLUMNS)
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(20);
 
-    if (error) {
-      console.error("Notification load failed:", error.message);
+    const result =
+      first.error && /application_id|offer_id|column/i.test(first.error.message)
+        ? await admin
+            .from("notifications")
+            .select(NOTIFICATION_COLUMNS_BASIC)
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(20)
+        : first;
+
+    if (result.error) {
+      console.error("Notification load failed:", result.error.message);
       return [] as NotificationRow[];
     }
 
-    return ((data ?? []) as unknown[]).map(mapNotificationRow).filter((row): row is NotificationRow => row !== null);
+    return ((result.data ?? []) as unknown[])
+      .map(mapNotificationRow)
+      .filter((row): row is NotificationRow => row !== null);
   } catch (error) {
     console.error(
       "Notification load failed:",
@@ -150,4 +140,22 @@ export async function markNotificationsRead(userId: string, ids: string[]) {
   }
 }
 
-export { mapNotificationRow, NOTIFICATION_COLUMNS };
+export async function markAllNotificationsRead(userId: string) {
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", userId)
+      .eq("is_read", false);
+
+    if (error) {
+      console.error("Notification update failed:", error.message);
+    }
+  } catch (error) {
+    console.error(
+      "Notification update failed:",
+      error instanceof Error ? error.message : error,
+    );
+  }
+}

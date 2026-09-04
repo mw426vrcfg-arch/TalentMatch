@@ -1,33 +1,31 @@
 import { PullToRefresh } from "@/components/app/pull-to-refresh";
-import { MeineTermine } from "@/components/bookings/meine-termine";
 import { SalonShell } from "@/components/business/salon-shell";
 import { SalonAnalyticsBoard } from "@/components/business/analytics-board";
-import { SalonOfferList } from "@/components/business/salon-offer-list";
 import { RatingWindow } from "@/components/ratings/rating-window";
-import { StarAverage } from "@/components/ratings/star-average";
 import { requireBusiness } from "@/lib/auth/require-business";
 import { SalonQuickActionsHub } from "@/components/business/quick-actions-hub";
+import { HomeOfferSearch } from "@/components/offers/home-offer-search";
+import { T } from "@/components/i18n/t";
 import { loadSalonAnalytics } from "@/lib/business/analytics";
 import { loadSalonQuickActions } from "@/lib/business/quick-actions";
 import { resolveLogoUrl } from "@/lib/business/images";
 import { loadSalonAppointments } from "@/lib/bookings/overview";
-import { loadSalonOffers } from "@/lib/offers/salon-list";
-import { loadUrgentMatchQuota } from "@/lib/offers/urgent-quota";
+import { loadInspirationFeed } from "@/lib/inspiration/feed";
 import { loadPendingRatingsForUser, loadSalonAverages } from "@/lib/ratings/store";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { StarAverage } from "@/components/ratings/star-average";
 
 export const dynamic = "force-dynamic";
 
 export default async function BusinessDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ noshow?: string; completed?: string }>;
+  searchParams: Promise<{ noshow?: string; completed?: string; q?: string }>;
 }) {
-  const { noshow, completed } = await searchParams;
+  const { noshow, completed, q } = await searchParams;
   const { user, business } = await requireBusiness();
-  const salonName = business?.business_name || "Dein Salon";
+  const salonName = business?.business_name;
 
-  const [appointments, pendingRatings, averages, analytics, offers, urgentQuota] = await Promise.all([
+  const [appointments, pendingRatings, averages, analytics, tiles] = await Promise.all([
     business ? loadSalonAppointments(business.id) : Promise.resolve([]),
     loadPendingRatingsForUser({ userId: user.id, role: "business" }),
     loadSalonAverages([user.id]),
@@ -40,10 +38,7 @@ export default async function BusinessDashboardPage({
           booked_slots: 0,
           total_slots: 0,
         }),
-    business ? loadSalonOffers(business.id) : Promise.resolve([]),
-    business
-      ? loadUrgentMatchQuota(createAdminClient(), business.id)
-      : Promise.resolve({ reached: false, used: 0, limit: 3, remaining: 3 }),
+    loadInspirationFeed(null),
   ]);
 
   const quickActions = business
@@ -58,49 +53,59 @@ export default async function BusinessDashboardPage({
 
   return (
     <SalonShell
-      salonName={salonName}
+      salonName={salonName || ""}
       location={business?.location}
       logoUrl={resolveLogoUrl(business?.logo_url)}
     >
       <PullToRefresh />
-      <div className="mb-8 max-w-2xl">
-        <p className="ui-kicker">Dashboard</p>
-        <h1 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">{salonName}</h1>
+      <div className="mb-4 max-w-2xl">
+        <p className="ui-kicker">
+          <T k="browse.discover" />
+        </p>
+        <h1 className="mt-2 font-serif text-4xl text-ink sm:text-5xl">
+          <T k="nav.dashboard" />
+        </h1>
         <StarAverage average={salonRating.average} count={salonRating.count} className="mt-2" />
       </div>
 
       {noshow ? (
         <p className="ui-alert-ok mb-8">
-          No-Show gemeldet. Der Kunde hat jetzt {noshow} aktive Strike
-          {noshow === "1" ? "" : "s"}
-          {Number(noshow) >= 3 ? " und ist gesperrt." : "."}
+          <T
+            k="salon.noshowReported"
+            values={{
+              count: noshow,
+              suffix: noshow === "1" ? "" : "s",
+              locked: Number(noshow) >= 3 ? "" : ".",
+            }}
+          />
+          {Number(noshow) >= 3 ? <T k="salon.noshowLocked" /> : null}
         </p>
       ) : null}
 
       {completed === "1" ? (
-        <p className="ui-alert-ok mb-8">Termin abgeschlossen. Bitte bewerte den Kunden.</p>
+        <p className="ui-alert-ok mb-8">
+          <T k="salon.completedPleaseRate" />
+        </p>
       ) : null}
 
-      <SalonQuickActionsHub stats={quickActions} />
-      <section className="mb-12">
-        <h2 className="font-serif text-3xl text-ink">Deine Angebote</h2>
-        <p className="mt-2 text-sm text-ink-soft">
-          Tippe auf den Stift, um Titel, Preise, Bild oder neue Slots zu ändern.
-        </p>
-        <div className="mt-6">
-        <SalonOfferList
-          offers={offers}
-          currentUserId={business?.id ?? ""}
-            urgentLimitReached={urgentQuota.reached}
-            urgentLimit={urgentQuota.limit}
-            urgentUsed={urgentQuota.used}
-            empty="Noch kein Angebot. Unter Angebot kannst du den ersten Deal veröffentlichen."
-          />
-        </div>
-      </section>
-      <SalonAnalyticsBoard stats={analytics} />
-      <RatingWindow items={pendingRatings} role="business" />
-      <MeineTermine items={appointments} role="salon" currentUserId={user.id} />
+      <div className="rounded-[22px] border border-white/20 bg-white/60 p-3 shadow-[0_12px_32px_rgba(15,15,20,0.05)] backdrop-blur-xl sm:p-3.5">
+        <SalonQuickActionsHub stats={quickActions} compact />
+        <SalonAnalyticsBoard stats={analytics} compact />
+      </div>
+
+      <div className="mt-4">
+        <RatingWindow items={pendingRatings} role="business" />
+      </div>
+
+      <div className="mt-5">
+        <HomeOfferSearch
+          tiles={tiles}
+          initialQuery={q ?? ""}
+          memberLevel="Gold"
+          showFavorite={false}
+          canApply={false}
+        />
+      </div>
     </SalonShell>
   );
 }

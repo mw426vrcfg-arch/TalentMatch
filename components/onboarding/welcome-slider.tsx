@@ -2,21 +2,23 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useT } from "@/components/i18n/i18n-provider";
+import { type MessageKey } from "@/lib/i18n/messages";
 
 const STORAGE_KEY = "tm_onboarding_v1";
 
 type Slide = {
-  kicker: string;
-  title: string;
-  body: string;
+  kicker: MessageKey;
+  title: MessageKey;
+  body: MessageKey;
   icon: React.ReactNode;
 };
 
 const SLIDES: Slide[] = [
   {
-    kicker: "Exklusiv",
-    title: "Last-Minute Deals finden",
-    body: "Premium-Salons öffnen ihre freien Slots zu Preisen, die es sonst nirgends gibt. Du entdeckst sie in dem Moment, in dem sie frei werden.",
+    kicker: "onboarding.exclusive",
+    title: "onboarding.exclusiveTitle",
+    body: "onboarding.exclusiveBody",
     icon: (
       <svg viewBox="0 0 24 24" className="h-full w-full" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M12 2.5 14.4 8l6 .5-4.6 3.9 1.4 5.9L12 15.2 6.8 18.3l1.4-5.9L3.6 8.5l6-.5z" />
@@ -24,9 +26,9 @@ const SLIDES: Slide[] = [
     ),
   },
   {
-    kicker: "Diskret",
-    title: "Anonym mit Haarfotos bewerben",
-    body: "Du zeigst deine Haare, nicht dein Gesicht. Name und Kontakt bleiben verborgen, bis der Salon deine Bewerbung annimmt.",
+    kicker: "onboarding.discreet",
+    title: "onboarding.discreetTitle",
+    body: "onboarding.discreetBody",
     icon: (
       <svg viewBox="0 0 24 24" className="h-full w-full" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M3.5 8.5a2 2 0 0 1 2-2h2l1.3-2h6.4l1.3 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />
@@ -35,9 +37,9 @@ const SLIDES: Slide[] = [
     ),
   },
   {
-    kicker: "Verbindlich",
-    title: "No-Show Schutz durch Strikes",
-    body: "Wer einen Termin platzen lässt, sammelt einen Strike. Drei davon sperren das Konto. So bleiben Termine zuverlässig — für beide Seiten.",
+    kicker: "onboarding.binding",
+    title: "onboarding.bindingTitle",
+    body: "onboarding.bindingBody",
     icon: (
       <svg viewBox="0 0 24 24" className="h-full w-full" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M12 3 5 6v5.5c0 4.3 2.9 8.2 7 9.5 4.1-1.3 7-5.2 7-9.5V6z" />
@@ -48,6 +50,7 @@ const SLIDES: Slide[] = [
 ];
 
 export function WelcomeSlider() {
+  const t = useT();
   const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [index, setIndex] = useState(0);
@@ -134,7 +137,7 @@ export function WelcomeSlider() {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Willkommen bei TalentMatch"
+      aria-label={t("onboarding.aria")}
       className="animate-app fixed inset-0 z-50 flex flex-col bg-[linear-gradient(180deg,#eef0f4_0%,#e2e5ec_100%)]"
     >
       <div className="pointer-events-none absolute inset-0">
@@ -150,7 +153,7 @@ export function WelcomeSlider() {
           onClick={dismiss}
           className="ui-btn-secondary px-3 text-xs"
         >
-          Überspringen
+          {t("onboarding.skip")}
         </button>
       </header>
 
@@ -167,19 +170,19 @@ export function WelcomeSlider() {
       >
         {SLIDES.map((slide, slideIndex) => (
           <section
-            key={slide.title}
-            aria-label={`Schritt ${slideIndex + 1} von ${SLIDES.length}`}
+            key={slide.kicker}
+            aria-label={t("onboarding.step", { n: slideIndex + 1, total: SLIDES.length })}
             className="flex w-full shrink-0 snap-center flex-col items-center justify-center px-8 text-center sm:px-12"
           >
             <div className="flex h-24 w-24 items-center justify-center rounded-[28px] border border-white/40 bg-white/70 text-ink shadow-[0_20px_50px_rgba(15,15,20,0.09)] backdrop-blur-xl sm:h-28 sm:w-28">
               <span className="block h-11 w-11 sm:h-12 sm:w-12">{slide.icon}</span>
             </div>
-            <p className="ui-kicker mt-9">{slide.kicker}</p>
+            <p className="ui-kicker mt-9">{t(slide.kicker)}</p>
             <h2 className="mt-4 max-w-md font-serif text-[2.1rem] leading-[1.12] tracking-[-0.02em] text-ink sm:text-5xl">
-              {slide.title}
+              {t(slide.title)}
             </h2>
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-ink-soft sm:max-w-md sm:text-base">
-              {slide.body}
+              {t(slide.body)}
             </p>
           </section>
         ))}
@@ -190,10 +193,10 @@ export function WelcomeSlider() {
           <div className="flex items-center gap-2">
             {SLIDES.map((slide, dotIndex) => (
               <button
-                key={slide.title}
+                key={slide.kicker}
                 type="button"
                 onClick={() => scrollTo(dotIndex)}
-                aria-label={`Zu Schritt ${dotIndex + 1}`}
+                aria-label={t("onboarding.toStep", { n: dotIndex + 1 })}
                 aria-current={dotIndex === index ? "step" : undefined}
                 className={`h-1.5 rounded-full transition-all duration-500 ease-out ${
                   dotIndex === index ? "w-7 bg-ink" : "w-1.5 bg-ink/20 hover:bg-ink/40"
@@ -207,10 +210,10 @@ export function WelcomeSlider() {
             onClick={isLast ? start : () => scrollTo(index + 1)}
             className="ui-btn-primary w-full"
           >
-            {isLast ? "Jetzt starten" : "Weiter"}
+            {isLast ? t("onboarding.start") : t("onboarding.next")}
           </button>
 
-          <p className="text-xs text-ink-soft">Wische horizontal, um mehr zu erfahren.</p>
+          <p className="text-xs text-ink-soft">{t("onboarding.swipe")}</p>
         </div>
       </footer>
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { loadMyStrikeStatus } from "@/app/dashboard/strike-actions";
+import { useT } from "@/components/i18n/i18n-provider";
 import { StarAverage } from "@/components/ratings/star-average";
 
 export function ReputationBoard({
@@ -15,6 +16,7 @@ export function ReputationBoard({
   count: number;
   initialStrikes: number;
 }) {
+  const t = useT();
   const [strikes, setStrikes] = useState(initialStrikes);
 
   useEffect(() => {
@@ -44,23 +46,23 @@ export function ReputationBoard({
   return (
         <div className="grid gap-4 sm:grid-cols-2">
       <article className="ui-card p-5 sm:p-6">
-        <p className="ui-kicker">Sterne</p>
-        <h2 className="mt-2 font-serif text-3xl text-ink">Dein Rating</h2>
+        <p className="ui-kicker">{t("strikes.starsKicker")}</p>
+        <h2 className="mt-2 font-serif text-3xl text-ink">{t("strikes.ratingTitle")}</h2>
         <div className="mt-3">
           <StarAverage average={average} count={count} />
         </div>
       </article>
       <article className="ui-card p-5 sm:p-6">
-        <p className="ui-kicker">No-Show Schutz</p>
+        <p className="ui-kicker">{t("strikes.kicker")}</p>
         <h2 className="mt-2 font-serif text-3xl text-ink">
-          {strikes} von 3 Strikes erhalten
+          {t("strikes.title", { count: strikes })}
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-ink-soft">
           {strikes >= 3
-            ? "Konto gesperrt nach drei No-Shows. Strikes verjähren nach 6 Monaten."
+            ? t("strikes.lockedBoard")
             : strikes === 0
-              ? "Keine aktiven Strikes. So bleibt der Zugang offen."
-              : "Beim dritten Strike wird der Login gesperrt. Aktive Strikes verjähren nach 6 Monaten."}
+              ? t("strikes.none")
+              : t("strikes.warningBoard")}
         </p>
       </article>
     </div>

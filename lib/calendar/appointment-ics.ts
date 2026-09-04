@@ -12,9 +12,9 @@ export function buildAppointmentIcs(item: AppointmentOverview) {
 
   return buildIcsCalendar({
     uid: `talentmatch-${item.booking_id || item.application_id}@talentmatch.app`,
-    title: item.service_title,
+    title: [item.service_title, item.counterpart_name].filter(Boolean).join(" · "),
     description: details,
-    location: item.event_location,
+    location: item.event_location || item.counterpart_address,
     startIso: item.start_time,
     durationMinutes: item.duration_minutes || 60,
   });

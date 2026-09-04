@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { choiceChipClass } from "@/components/hair/choice-chip";
+import { useT } from "@/components/i18n/i18n-provider";
 import { HAIR_THICKNESS, type TreatmentPass } from "@/lib/customer/treatment-pass";
+import { type MessageKey } from "@/lib/i18n/messages";
 
 export function TreatmentPassFields({ pass }: { pass?: TreatmentPass | null }) {
+  const t = useT();
   const [thickness, setThickness] = useState(pass?.hair_thickness ?? "");
 
   useEffect(() => {
@@ -14,36 +17,35 @@ export function TreatmentPassFields({ pass }: { pass?: TreatmentPass | null }) {
   return (
     <div className="space-y-4 rounded-[22px] border border-white/30 bg-white/55 p-4">
       <div>
-        <p className="text-sm font-medium text-ink">Digitaler Behandlungs-Pass</p>
+        <p className="text-sm font-medium text-ink">{t("pass.title")}</p>
         <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-          Deine chemische Historie. Salons sehen sie nur, wenn du dich bewirbst — sie schützt dein Haar
-          vor falschen Behandlungen.
+          {t("pass.thicknessHint")}
         </p>
       </div>
 
       <label className="block">
-        <span className="mb-1.5 block text-sm text-ink-soft">Letzte Blondierung</span>
+        <span className="mb-1.5 block text-sm text-ink-soft">{t("pass.lastBleach")}</span>
         <input
           name="last_bleaching"
           defaultValue={pass?.last_bleaching ?? ""}
-          placeholder="z. B. März 2026 oder noch nie"
+          placeholder={t("pass.lastBleachPlaceholder")}
           className="ui-input"
         />
       </label>
 
       <label className="block">
-        <span className="mb-1.5 block text-sm text-ink-soft">Chemische Behandlungen</span>
+        <span className="mb-1.5 block text-sm text-ink-soft">{t("pass.chemicalTreatments")}</span>
         <textarea
           name="chemical_treatments"
           rows={3}
           defaultValue={pass?.chemical_treatments ?? ""}
-          placeholder="Coloration, Dauerwelle, Glättung, Keratin…"
+          placeholder={t("pass.chemicalPlaceholder")}
           className="ui-input resize-y"
         />
       </label>
 
       <fieldset>
-        <legend className="mb-2 text-sm text-ink-soft">Haardicke</legend>
+        <legend className="mb-2 text-sm text-ink-soft">{t("pass.thickness")}</legend>
         <div className="flex flex-wrap gap-2">
           <label className="cursor-pointer">
             <input
@@ -54,7 +56,7 @@ export function TreatmentPassFields({ pass }: { pass?: TreatmentPass | null }) {
               onChange={() => setThickness("")}
               className="sr-only"
             />
-            <span className={choiceChipClass(thickness === "")}>Keine Angabe</span>
+            <span className={choiceChipClass(thickness === "")}>{t("pass.none")}</span>
           </label>
           {HAIR_THICKNESS.map((option) => {
             const active = thickness === option.value;
@@ -68,7 +70,7 @@ export function TreatmentPassFields({ pass }: { pass?: TreatmentPass | null }) {
                   onChange={() => setThickness(option.value)}
                   className="sr-only"
                 />
-                <span className={choiceChipClass(active)}>{option.label}</span>
+                <span className={choiceChipClass(active)}>{t(`pass.${option.value}` as MessageKey)}</span>
               </label>
             );
           })}

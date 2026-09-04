@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { RegisterForm } from "@/components/auth/register-form";
+import { T } from "@/components/i18n/t";
 import { isReferralUserId } from "@/lib/referrals/store";
 
 export default async function RegisterPage({
@@ -14,13 +15,13 @@ export default async function RegisterPage({
 
   return (
     <AuthShell
-      title="Konto erstellen"
-      subtitle="Wähle, ob du als Kunde Deals suchst oder als Salon Kapazitäten anbietest."
+      titleKey="auth.createAccount"
+      subtitleKey="auth.registerSubtitle"
       footer={
         <>
-          Bereits registriert?{" "}
+          <T k="auth.alreadyRegistered" />{" "}
           <Link href="/login" className="ui-link">
-            Anmelden
+            <T k="auth.signIn" />
           </Link>
         </>
       }

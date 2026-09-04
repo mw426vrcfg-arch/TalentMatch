@@ -1,12 +1,13 @@
 "use client";
 
 import { type BeforeAfterPair } from "@/lib/portfolio/before-after";
+import { useT } from "@/components/i18n/i18n-provider";
 
 export function BeforeAfterCarousel({ pairs }: { pairs: BeforeAfterPair[] }) {
+  const t = useT();
+
   if (pairs.length === 0) {
-    return (
-      <div className="ui-empty mt-4">Noch keine Vorher-Nachher-Bilder. Nach einem completed Termin kannst du sie mit der Bewertung hochladen.</div>
-    );
+    return <div className="ui-empty mt-4">{t("rating.galleryEmpty")}</div>;
   }
 
   return (
@@ -18,15 +19,15 @@ export function BeforeAfterCarousel({ pairs }: { pairs: BeforeAfterPair[] }) {
         >
           <div className="grid grid-cols-2">
             <figure>
-              <img src={pair.before_url} alt="Vorher" className="h-56 w-full object-cover sm:h-64" />
+              <img src={pair.before_url} alt={t("common.before")} className="h-56 w-full object-cover sm:h-64" />
               <figcaption className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">
-                Vorher
+                {t("common.before")}
               </figcaption>
             </figure>
             <figure className="border-l border-white/30">
-              <img src={pair.after_url} alt="Nachher" className="h-56 w-full object-cover sm:h-64" />
+              <img src={pair.after_url} alt={t("common.after")} className="h-56 w-full object-cover sm:h-64" />
               <figcaption className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">
-                Nachher
+                {t("common.after")}
               </figcaption>
             </figure>
           </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toggleFollowAction } from "@/app/favorites/actions";
+import { useT } from "@/components/i18n/i18n-provider";
 
 export function FollowSalonButton({
   salonId,
@@ -11,6 +12,7 @@ export function FollowSalonButton({
   salonId: string;
   initialFollowing: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const [following, setFollowing] = useState(initialFollowing);
   const [pending, startTransition] = useTransition();
@@ -38,7 +40,7 @@ export function FollowSalonButton({
       }}
       className={following ? "ui-btn-primary" : "ui-btn-secondary"}
     >
-      {following ? "Abonniert" : "Salon abonnieren"}
+      {following ? t("actions.unfollow") : t("actions.follow")}
     </button>
   );
 }

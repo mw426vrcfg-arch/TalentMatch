@@ -11,7 +11,7 @@ import { refreshOfferAvailability, setInitialAvailableSlots } from "@/lib/offers
 import { inferServiceType } from "@/lib/offers/service-type";
 import { scheduleSlotsFromIso } from "@/lib/offers/slot-schedule";
 import { loadUrgentMatchQuota } from "@/lib/offers/urgent-quota";
-import { readId, readLine, readText, TEXT_LIMITS } from "@/lib/security/sanitize";
+import { readId, readLine, readText, sanitizeUuid, TEXT_LIMITS } from "@/lib/security/sanitize";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { missingColumnFromError } from "@/lib/supabase/flexible-write";
 
@@ -28,6 +28,28 @@ function parsePrice(value: string) {
   const normalized = value.replace(",", ".");
   const amount = Number(normalized);
   return Number.isFinite(amount) ? amount : NaN;
+}
+
+function parseUrgent(formData: FormData) {
+  const value = formData.get("is_urgent");
+  return value === "true" || value === "on" || value === "1";
+}
+
+async function persistUrgentFlag(
+  admin: ReturnType<typeof createAdminClient>,
+  offerId: string,
+  isUrgent: boolean,
+) {
+  const { error } = await admin.from("offers").update({ is_urgent: isUrgent }).eq("id", offerId);
+  if (!error) {
+    return null;
+  }
+  if (/is_urgent|schema cache|does not exist/i.test(error.message)) {
+    return isUrgent
+      ? "Last-Minute-Flag konnte nicht gespeichert werden. Bitte offers_urgent.sql in Supabase ausführen."
+      : null;
+  }
+  return error.message;
 }
 
 export async function createOfferAction(
@@ -47,10 +69,7 @@ export async function createOfferAction(
   const normalPrice = parsePrice(readString(formData, "normal_price"));
   const discountPrice = parsePrice(readString(formData, "discount_price"));
   const durationMinutes = Number(readString(formData, "duration_minutes"));
-  const isUrgent =
-    formData.get("is_urgent") === "true" ||
-    formData.get("is_urgent") === "on" ||
-    formData.get("is_urgent") === "1";
+  const isUrgent = parseUrgent(formData);
   const vipEarlyAccess =
     formData.get("vip_early_access") === "true" ||
     formData.get("vip_early_access") === "on" ||
@@ -116,12 +135,18 @@ export async function createOfferAction(
     .select("id")
     .single();
 
-  for (let attempt = 0; attempt < 6 && offerError; attempt += 1) {
-    const match = offerError.message.match(/'([^']+)' column/i);
-    if (!match || !(match[1] in payload)) {
+  for (let attempt = 0; attempt < 8 && offerError; attempt += 1) {
+    const column = missingColumnFromError(offerError.message);
+    if (!column || !(column in payload)) {
       break;
     }
-    delete payload[match[1]];
+    if (column === "is_urgent" && isUrgent) {
+      return {
+        error:
+          "Last-Minute-Flag konnte nicht gespeichert werden. Bitte offers_urgent.sql in Supabase ausführen.",
+      };
+    }
+    delete payload[column];
     const retry = await admin.from("offers").insert(payload).select("id").single();
     offer = retry.data;
     offerError = retry.error;
@@ -148,6 +173,11 @@ export async function createOfferAction(
   }
 
   await setInitialAvailableSlots(admin, offer.id, slots.length);
+
+  const urgentError = await persistUrgentFlag(admin, offer.id, isUrgent);
+  if (urgentError) {
+    return { error: urgentError };
+  }
 
   const image = formData.get("offer_image");
   if (image instanceof File && image.size > 0) {
@@ -216,10 +246,7 @@ export async function updateOfferAction(
   const normalPrice = parsePrice(readString(formData, "normal_price"));
   const discountPrice = parsePrice(readString(formData, "discount_price"));
   const durationMinutes = Number(readString(formData, "duration_minutes"));
-  const isUrgent =
-    formData.get("is_urgent") === "true" ||
-    formData.get("is_urgent") === "on" ||
-    formData.get("is_urgent") === "1";
+  const isUrgent = parseUrgent(formData);
   const vipEarlyAccess =
     formData.get("vip_early_access") === "true" ||
     formData.get("vip_early_access") === "on" ||
@@ -325,10 +352,16 @@ export async function updateOfferAction(
     .eq("id", offerId)
     .eq("business_id", business.id);
 
-  for (let attempt = 0; attempt < 6 && updateError; attempt += 1) {
+  for (let attempt = 0; attempt < 8 && updateError; attempt += 1) {
     const column = missingColumnFromError(updateError.message);
     if (!column || !(column in payload)) {
       break;
+    }
+    if (column === "is_urgent" && isUrgent) {
+      return {
+        error:
+          "Last-Minute-Flag konnte nicht gespeichert werden. Bitte offers_urgent.sql in Supabase ausführen.",
+      };
     }
     delete payload[column];
     const retry = await admin.from("offers").update(payload).eq("id", offerId).eq("business_id", business.id);
@@ -337,6 +370,11 @@ export async function updateOfferAction(
 
   if (updateError) {
     return { error: updateError.message };
+  }
+
+  const urgentError = await persistUrgentFlag(admin, offerId, isUrgent);
+  if (urgentError) {
+    return { error: urgentError };
   }
 
   if (freshStarts.length > 0) {
@@ -394,4 +432,69 @@ export async function updateOfferAction(
   revalidatePath("/offers");
   revalidatePath(`/offers/${offerId}`);
   redirect("/business/offers?updated=1");
+}
+
+export type DeleteOfferState = {
+  error?: string;
+};
+
+export async function deleteOfferAction(offerId: string): Promise<DeleteOfferState> {
+  const { business } = await requireBusiness();
+
+  if (!business) {
+    return { error: "Kein Salonprofil gefunden. Bitte zuerst die Registrierung als Salon abschliessen." };
+  }
+
+  const id = sanitizeUuid(offerId);
+  if (!id) {
+    return { error: "Angebot nicht gefunden." };
+  }
+
+  const admin = createAdminClient();
+  const { data: offer, error: loadError } = await admin
+    .from("offers")
+    .select("id, business_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (loadError) {
+    return { error: loadError.message };
+  }
+  if (!offer || String((offer as { business_id?: string }).business_id) !== business.id) {
+    return { error: "Du kannst nur deine eigenen Angebote bearbeiten." };
+  }
+
+  const { data: slotRows } = await admin.from("offer_slots").select("id").eq("offer_id", id);
+  const slotIds = (slotRows ?? []).map((row) => String((row as { id: string }).id)).filter(Boolean);
+  const { data: appRows } = await admin.from("applications").select("id").eq("offer_id", id);
+  const appIds = (appRows ?? []).map((row) => String((row as { id: string }).id)).filter(Boolean);
+
+  if (appIds.length > 0) {
+    const { error: bookingError } = await admin.from("bookings").delete().in("application_id", appIds);
+    if (bookingError) {
+      return { error: bookingError.message || "Angebot konnte nicht gelöscht werden." };
+    }
+  }
+
+  if (slotIds.length > 0) {
+    const { error: slotBookingError } = await admin.from("bookings").delete().in("slot_id", slotIds);
+    if (slotBookingError) {
+      return { error: slotBookingError.message || "Angebot konnte nicht gelöscht werden." };
+    }
+  }
+
+  const { error } = await admin.from("offers").delete().eq("id", id).eq("business_id", business.id);
+  if (error) {
+    return { error: error.message || "Angebot konnte nicht gelöscht werden." };
+  }
+
+  revalidatePath("/business/dashboard");
+  revalidatePath("/business/offers");
+  revalidatePath("/business/applications");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/favorites");
+  revalidatePath("/offers");
+  revalidatePath(`/offers/${id}`);
+
+  return {};
 }

@@ -84,19 +84,20 @@ export async function applyToOfferAction(
     return { error: "VIP Early Access: dieses Angebot ist für dein Level noch nicht sichtbar." };
   }
 
-  const files = IMAGE_KEYS.map((key) => formData.get(key));
+  const files = IMAGE_KEYS.map((key) => {
+    const value = formData.get(key);
+    return value instanceof File && value.size > 0 ? { key, file: value } : null;
+  }).filter((entry): entry is { key: (typeof IMAGE_KEYS)[number]; file: File } => Boolean(entry));
 
-  if (files.some((file) => !(file instanceof File) || file.size === 0)) {
-    return { error: "Bitte Hair Images für Front, Back und Side hochladen." };
+  if (files.length < 1) {
+    return { error: "Bitte mindestens ein Haarfoto hochladen." };
   }
 
-  const imageFiles = files as File[];
-
-  if (imageFiles.some((file) => !isImageFile(file))) {
+  if (files.some((entry) => !isImageFile(entry.file))) {
     return { error: "Hair Images müssen Bilddateien sein (z. B. JPG oder PNG)." };
   }
 
-  if (imageFiles.some((file) => file.size > MAX_BYTES)) {
+  if (files.some((entry) => entry.file.size > MAX_BYTES)) {
     return { error: "Jedes Bild darf höchstens 5 MB groß sein." };
   }
 
@@ -105,9 +106,7 @@ export async function applyToOfferAction(
 
   const uploaded_images: string[] = [];
 
-  for (let index = 0; index < IMAGE_KEYS.length; index += 1) {
-    const key = IMAGE_KEYS[index];
-    const file = imageFiles[index];
+  for (const { key, file } of files) {
     const path = `${user.id}/${offerId}/${Date.now()}-${key}.${fileExtension(file)}`;
     const { error: uploadError } = await admin.storage.from(BUCKET).upload(path, file, {
       contentType: file.type || "image/jpeg",
@@ -162,7 +161,7 @@ export async function applyToOfferAction(
     await createNotification(admin, {
       userId: salonUserId,
       type: "application_received",
-      title: "Neue Bewerbung",
+      title: "Neue Bewerbung eingegangen",
       message: `${profile.full_name || "Ein Kunde"} hat sich auf „${offer.title}“ beworben.`,
       applicationId: created.id,
       offerId,

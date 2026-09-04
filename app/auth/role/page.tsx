@@ -36,7 +36,7 @@ export default async function OAuthRolePage() {
       <OAuthRoleDialog
         initialRole={isOAuthRole(pendingRole) ? pendingRole : "customer"}
         suggestedName={displayNameFromUser(user)}
-        provider={PROVIDER_LABEL[provider] ?? "deinem Konto"}
+        provider={PROVIDER_LABEL[provider] ?? (provider || "OAuth")}
       />
     </main>
   );

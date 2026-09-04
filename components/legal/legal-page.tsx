@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { type ReactNode } from "react";
 import { SiteFooter } from "@/components/site-footer";
+import { useT } from "@/components/i18n/i18n-provider";
 
 export function LegalPage({
   kicker,
@@ -13,11 +16,12 @@ export function LegalPage({
   updated?: string;
   children: ReactNode;
 }) {
+  const t = useT();
   return (
     <>
     <main className="mx-auto w-full max-w-3xl px-6 py-16 sm:px-8 sm:py-24">
       <Link href="/" className="ui-link">
-        ← Zurück
+        ← {t("settings.back")}
       </Link>
       <p className="ui-kicker mt-10">{kicker}</p>
       <h1 className="mt-4 font-serif text-4xl tracking-tight text-ink sm:text-5xl">{title}</h1>

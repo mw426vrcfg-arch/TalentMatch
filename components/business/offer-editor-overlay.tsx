@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useT } from "@/components/i18n/i18n-provider";
 import { hapticTap } from "@/lib/ui/haptic";
 
 export function OfferEditorOverlay({
@@ -17,6 +18,7 @@ export function OfferEditorOverlay({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const t = useT();
   const [leaving, setLeaving] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -78,7 +80,7 @@ export function OfferEditorOverlay({
             {subtitle ? <p className="mt-1 text-sm text-ink-soft">{subtitle}</p> : null}
           </div>
           <button type="button" onClick={close} className="ui-btn-secondary px-3 text-xs">
-            Schliessen
+            {t("common.close")}
           </button>
         </div>
         <div className="overflow-y-auto px-5 py-6 pb-10 sm:px-8">{children}</div>

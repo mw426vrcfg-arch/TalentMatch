@@ -21,7 +21,7 @@ export default async function OffersPage({
   }
 
   return (
-    <CustomerShell title="Browse" signedIn={false}>
+      <CustomerShell titleKey="nav.browse" signedIn={false}>
       <BrowseOffers query={q || stadt} basePath="/offers" />
     </CustomerShell>
   );

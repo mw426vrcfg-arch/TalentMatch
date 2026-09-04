@@ -10,15 +10,19 @@ import { BlockCustomerButton } from "@/components/business/block-customer-button
 import { CompleteButton, NoShowButton } from "@/components/business/confirmed-bookings";
 import { AppointmentChat } from "@/components/messages/appointment-chat";
 import { LiveRefresh } from "@/components/live-refresh";
+import { ScrollToId } from "@/components/ui/scroll-to-id";
 import {
-  appointmentStatusLabel,
   splitAppointments,
   type AppointmentOverview,
 } from "@/lib/bookings/overview";
 import { isMessagingEnabled } from "@/lib/messages/store";
 import { formatSlotDay, formatSlotTime } from "@/lib/offers/format";
+import { intlLocale } from "@/lib/i18n/config";
+import { type MessageKey } from "@/lib/i18n/messages";
+import { useLocale, useT } from "@/components/i18n/i18n-provider";
 
 function StatusBadge({ status }: { status: AppointmentOverview["status"] }) {
+  const t = useT();
   const closed = status === "completed" || status === "no_show";
   return (
     <span
@@ -32,7 +36,7 @@ function StatusBadge({ status }: { status: AppointmentOverview["status"] }) {
               : "bg-zinc-900 text-cream"
       }`}
     >
-      {appointmentStatusLabel(status)}
+      {t(`status.${status}` as MessageKey)}
     </span>
   );
 }
@@ -42,17 +46,26 @@ function AppointmentCard({
   role,
   currentUserId,
   actions,
+  focused,
+  openChat,
 }: {
   item: AppointmentOverview;
   role: "customer" | "salon";
   currentUserId: string;
   actions?: ReactNode;
+  focused?: boolean;
+  openChat?: boolean;
 }) {
   const showPhone = Boolean(item.counterpart_phone);
   const showChat = isMessagingEnabled(item.status);
+  const t = useT();
+  const locale = useLocale();
 
   return (
-    <article className="ui-card p-5">
+    <article
+      id={`appointment-${item.application_id}`}
+      className={`ui-card scroll-mt-28 p-5 ${focused ? "ui-focus-card" : ""}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           {item.counterpart_logo_url ? (
@@ -84,15 +97,15 @@ function AppointmentCard({
 
       <dl className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <div>
-          <dt className="ui-kicker">Datum</dt>
-          <dd className="mt-1 text-sm text-ink">{formatSlotDay(item.start_time)}</dd>
+          <dt className="ui-kicker">{t("appointments.date")}</dt>
+          <dd className="mt-1 text-sm text-ink">{formatSlotDay(item.start_time, intlLocale(locale))}</dd>
         </div>
         <div>
-          <dt className="ui-kicker">Uhrzeit</dt>
-          <dd className="mt-1 text-sm text-ink">{formatSlotTime(item.start_time)}</dd>
+          <dt className="ui-kicker">{t("appointments.time")}</dt>
+          <dd className="mt-1 text-sm text-ink">{formatSlotTime(item.start_time, intlLocale(locale))}</dd>
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <dt className="ui-kicker">Service</dt>
+          <dt className="ui-kicker">{t("appointments.service")}</dt>
           <dd className="mt-1 text-sm text-ink">{item.service_title}</dd>
         </div>
       </dl>
@@ -100,12 +113,15 @@ function AppointmentCard({
       {role === "salon" ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           {typeof item.active_strikes === "number" ? (
-            <p className="text-sm text-ink-soft">Aktive Strikes: {item.active_strikes} / 3</p>
+            <p className="text-sm text-ink-soft">{t("booking.strikesCount", { count: item.active_strikes })}</p>
           ) : (
             <span />
           )}
           {item.counterpart_user_id ? (
-            <BlockCustomerButton customerId={item.counterpart_user_id} />
+            <BlockCustomerButton
+              customerId={item.counterpart_user_id}
+              customerName={item.counterpart_name}
+            />
           ) : null}
         </div>
       ) : null}
@@ -125,6 +141,7 @@ function AppointmentCard({
           bookingId={item.booking_id}
           currentUserId={currentUserId}
           counterpartName={item.counterpart_name}
+          autoFocus={Boolean(focused && openChat)}
         />
       ) : null}
     </article>
@@ -154,12 +171,18 @@ export function MeineTermine({
   items,
   role,
   currentUserId,
+  focusApplicationId,
+  openChat,
 }: {
   items: AppointmentOverview[];
   role: "customer" | "salon";
   currentUserId: string;
+  focusApplicationId?: string | null;
+  openChat?: boolean;
 }) {
   const { upcoming, past } = splitAppointments(items);
+  const focusId = focusApplicationId || null;
+  const t = useT();
 
   function actionsFor(item: AppointmentOverview, section: "upcoming" | "past") {
     const open =
@@ -237,20 +260,19 @@ export function MeineTermine({
   }
 
   return (
-    <section className="mb-12">
+    <section id="meine-termine" className="mb-12">
       {role === "customer" ? <LiveRefresh intervalMs={4000} /> : null}
+      <ScrollToId id={focusId ? `appointment-${focusId}` : null} />
       <div className="max-w-2xl">
-        <p className="ui-kicker">Kapitel 4.7.1 · Kalender-Synchronisation</p>
-        <h2 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">Meine Termine</h2>
+        <p className="ui-kicker">{t("appointments.kicker")}</p>
+        <h2 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">{t("appointments.title")}</h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          {role === "customer"
-            ? "Bei anstehenden Terminen siehst du den echten Salon mit Name, Telefon und Logo."
-            : "Bestätigte Termine kannst du als iCal-Datei in Apple Calendar oder Google Calendar importieren."}
+          {t(role === "customer" ? "appointments.introCustomer" : "appointments.introSalon")}
         </p>
       </div>
 
       <div className="mt-8 grid gap-10 lg:grid-cols-2">
-        <Group title="Anstehende Termine" empty="Keine anstehenden Termine." hasItems={upcoming.length > 0}>
+        <Group title={t("appointments.upcoming")} empty={t("appointments.upcomingEmpty")} hasItems={upcoming.length > 0}>
           {upcoming.map((item) => (
               <AppointmentCard
                 key={item.id}
@@ -258,10 +280,12 @@ export function MeineTermine({
                 role={role}
                 currentUserId={currentUserId}
                 actions={actionsFor(item, "upcoming")}
+                focused={item.application_id === focusId}
+                openChat={openChat}
               />
             ))}
         </Group>
-        <Group title="Vergangene Termine" empty="Noch keine vergangenen Termine." hasItems={past.length > 0}>
+        <Group title={t("appointments.past")} empty={t("appointments.pastEmpty")} hasItems={past.length > 0}>
           {past.map((item) => (
               <AppointmentCard
                 key={item.id}
@@ -269,6 +293,8 @@ export function MeineTermine({
                 role={role}
                 currentUserId={currentUserId}
                 actions={actionsFor(item, "past")}
+                focused={item.application_id === focusId}
+                openChat={openChat}
               />
             ))}
         </Group>

@@ -1,15 +1,49 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { markNotificationsReadAction } from "@/app/notifications/actions";
+import { markAllNotificationsReadAction } from "@/app/notifications/actions";
 import {
   mapNotificationRow,
+  mergeNotificationLists,
+  NOTIFICATION_COLUMNS,
+  NOTIFICATION_COLUMNS_BASIC,
   type NotificationRow,
-} from "@/lib/notifications/create";
+} from "@/lib/notifications/rows";
+import { hrefForNotification } from "@/lib/notifications/links";
 import { createClient } from "@/lib/supabase/client";
+import { type UserRole } from "@/lib/supabase/env";
+import { hapticTap } from "@/lib/ui/haptic";
+import { intlLocale } from "@/lib/i18n/config";
+import { notificationCopy } from "@/lib/i18n/messages";
+import { useLocale, useLocalize, useT } from "@/components/i18n/i18n-provider";
 
-function formatWhen(iso: string) {
-  return new Intl.DateTimeFormat("de-CH", {
+const lastClearedAt = new Map<string, number>();
+
+function wasCleared(userId: string, item: NotificationRow) {
+  const cleared = lastClearedAt.get(userId);
+  if (!cleared) {
+    return item.is_read;
+  }
+  return item.is_read || new Date(item.created_at).getTime() <= cleared;
+}
+
+function notificationText(
+  item: NotificationRow,
+  t: ReturnType<typeof useT>,
+  localize: ReturnType<typeof useLocalize>,
+) {
+  const copy = notificationCopy(item.type, t);
+  const locTitle = localize(item.title);
+  const locBody = localize(item.message);
+  return {
+    title: locTitle !== item.title ? locTitle : copy.title.includes("{") ? locTitle : copy.title,
+    body: locBody !== item.message ? locBody : copy.body.includes("{") ? locBody : copy.body,
+  };
+}
+
+function formatWhen(iso: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -19,39 +53,71 @@ function formatWhen(iso: string) {
 
 export function NotificationBell({
   userId,
+  role,
   initialItems,
 }: {
   userId: string;
+  role: UserRole;
   initialItems: NotificationRow[];
 }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationRow[]>(initialItems);
   const rootRef = useRef<HTMLDivElement>(null);
+  const t = useT();
+  const localize = useLocalize();
+  const locale = useLocale();
+  const markedReadIds = useRef(new Set(initialItems.filter((item) => item.is_read).map((item) => item.id)));
+  const seeded = useRef(false);
+
+  const mergeIncoming = useCallback((incoming: NotificationRow[]) => {
+    for (const item of incoming) {
+      if (wasCleared(userId, item)) {
+        markedReadIds.current.add(item.id);
+      }
+    }
+    setItems((current) => mergeNotificationLists(current, incoming, markedReadIds.current));
+  }, [userId]);
 
   const load = useCallback(async () => {
     const supabase = createClient();
-    const { data, error } = await supabase
+    const first = await supabase
       .from("notifications")
-      .select("id, type, title, message, is_read, created_at")
+      .select(NOTIFICATION_COLUMNS)
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(20);
 
-    if (error) {
-      console.error("Notification load failed:", error.message);
+    const result =
+      first.error && /application_id|offer_id|column/i.test(first.error.message)
+        ? await supabase
+            .from("notifications")
+            .select(NOTIFICATION_COLUMNS_BASIC)
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(20)
+        : first;
+
+    if (result.error) {
+      console.error("Notification load failed:", result.error.message);
       return;
     }
 
-    setItems(
-      (data ?? [])
+    mergeIncoming(
+      ((result.data ?? []) as unknown[])
         .map(mapNotificationRow)
         .filter((row): row is NotificationRow => row !== null),
     );
-  }, [userId]);
+  }, [mergeIncoming, userId]);
 
   useEffect(() => {
-    setItems(initialItems);
-  }, [initialItems]);
+    if (!seeded.current) {
+      seeded.current = true;
+      setItems(initialItems);
+      return;
+    }
+
+    mergeIncoming(initialItems);
+  }, [initialItems, mergeIncoming]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -75,34 +141,41 @@ export function NotificationBell({
         },
         (payload) => {
           const incoming = mapNotificationRow(payload.new);
-          if (!incoming) {
-            void load();
-            return;
+          if (incoming) {
+            mergeIncoming([incoming]);
           }
-          setItems((current) => {
-            if (current.some((item) => item.id === incoming.id)) {
-              return current;
-            }
-            return [incoming, ...current].slice(0, 20);
-          });
+          void load();
         },
       )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED" && !cancelled) {
-          void load();
-        }
-      });
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const incoming = mapNotificationRow(payload.new);
+          if (incoming) {
+            mergeIncoming([incoming]);
+          }
+        },
+      )
+      .subscribe();
 
     const poll = window.setInterval(() => {
-      void load();
-    }, 8000);
+      if (!cancelled) {
+        void load();
+      }
+    }, 20000);
 
     return () => {
       cancelled = true;
       window.clearInterval(poll);
       void supabase.removeChannel(channel);
     };
-  }, [load, userId]);
+  }, [load, mergeIncoming, userId]);
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
@@ -115,26 +188,25 @@ export function NotificationBell({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, []);
 
-  const unread = items.filter((item) => !item.is_read).length;
+  const unread = items.filter((item) => !wasCleared(userId, item)).length;
 
-  async function markAllRead() {
-    const unreadIds = items.filter((item) => !item.is_read).map((item) => item.id);
-    if (unreadIds.length === 0) {
-      return;
-    }
-
-    setItems((current) =>
-      current.map((item) => (item.is_read ? item : { ...item, is_read: true })),
-    );
-
-    await markNotificationsReadAction(unreadIds);
+  function markVisibleRead() {
+    lastClearedAt.set(userId, Date.now());
+    setItems((current) => {
+      for (const item of current) {
+        markedReadIds.current.add(item.id);
+      }
+      return current.map((item) => (item.is_read ? item : { ...item, is_read: true }));
+    });
+    void markAllNotificationsReadAction();
   }
 
-  async function toggleOpen() {
+  function toggleOpen() {
     const next = !open;
     setOpen(next);
+    hapticTap("light");
     if (next) {
-      await markAllRead();
+      markVisibleRead();
     }
   }
 
@@ -142,9 +214,10 @@ export function NotificationBell({
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        onClick={() => void toggleOpen()}
+        onClick={toggleOpen}
         className="relative ui-icon-btn"
-        aria-label={unread > 0 ? `${unread} neue Benachrichtigungen` : "Benachrichtigungen"}
+        aria-expanded={open}
+        aria-label={unread > 0 ? t("notifications.ariaUnread", { count: unread }) : t("notifications.aria")}
       >
         <svg
           viewBox="0 0 24 24"
@@ -168,27 +241,38 @@ export function NotificationBell({
       </button>
 
       {open ? (
-        <div className="ui-card animate-enter absolute right-0 z-30 mt-3 w-[min(22rem,calc(100vw-2rem))] overflow-hidden">
-          <div className="border-b border-zinc-200 px-4 py-3">
-            <p className="ui-kicker">Mitteilungen</p>
-            <p className="mt-1 text-sm text-ink">Neue Bewerbungen und Terminbestätigungen</p>
+        <div className="absolute right-0 z-50 mt-3 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-[24px] border border-white/25 bg-white/78 shadow-[0_24px_80px_rgba(15,15,20,0.14)] backdrop-blur-2xl ui-sheet">
+          <div className="border-b border-white/25 px-4 py-3">
+            <p className="ui-kicker">{t("notifications.title")}</p>
+            <p className="mt-1 text-sm text-ink">{t("notifications.subtitle")}</p>
           </div>
           <ul className="max-h-80 overflow-y-auto">
             {items.length === 0 ? (
-              <li className="px-4 py-8 text-sm text-ink-soft">Noch keine Benachrichtigungen.</li>
+              <li className="px-5 py-12 text-center text-sm leading-relaxed text-ink-soft">
+                {t("notifications.empty")}
+              </li>
             ) : (
-              items.map((item) => (
-                <li
-                  key={item.id}
-                  className={`border-b border-zinc-100 px-4 py-3 last:border-0 ${
-                    item.is_read ? "" : "bg-zinc-50"
-                  }`}
-                >
-                  <p className="text-sm font-medium text-ink">{item.title}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-ink-soft">{item.message}</p>
-                  <p className="mt-1 text-xs text-ink-soft">{formatWhen(item.created_at)}</p>
+              items.map((item) => {
+                const copy = notificationText(item, t, localize);
+                return (
+                <li key={item.id} className="border-b border-white/20 last:border-0">
+                  <Link
+                    href={hrefForNotification(item, role)}
+                    onClick={() => {
+                      hapticTap("light");
+                      setOpen(false);
+                    }}
+                    className={`block px-4 py-3.5 transition duration-300 ease-out hover:bg-white/70 active:scale-[0.99] ${
+                      wasCleared(userId, item) ? "" : "bg-white/45"
+                    }`}
+                  >
+                    <p className="text-sm font-medium text-ink">{copy.title}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-ink-soft">{copy.body}</p>
+                    <p className="mt-1 text-xs text-ink-soft">{formatWhen(item.created_at, intlLocale(locale))}</p>
+                  </Link>
                 </li>
-              ))
+                );
+              })
             )}
           </ul>
         </div>

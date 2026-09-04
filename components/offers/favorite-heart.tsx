@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { toggleFavoriteAction } from "@/app/favorites/actions";
+import { useT } from "@/components/i18n/i18n-provider";
 
 export function FavoriteHeart({
   offerId,
@@ -11,6 +12,7 @@ export function FavoriteHeart({
   offerId: string;
   initialSaved: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const [saved, setSaved] = useState(initialSaved);
   const [pending, startTransition] = useTransition();
@@ -24,7 +26,7 @@ export function FavoriteHeart({
       type="button"
       disabled={pending}
       aria-pressed={saved}
-      aria-label={saved ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
+      aria-label={saved ? t("favorites.removeAria") : t("favorites.addAria")}
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();

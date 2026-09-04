@@ -10,6 +10,7 @@ import {
   uploadSalonLogo,
 } from "@/lib/business/images";
 import { loadBusinessProfileByUserId, saveBusinessProfile } from "@/lib/business/profile-store";
+import { asGenderOrNull } from "@/lib/profile/gender";
 import { readLine, readText, sanitizePhone, TEXT_LIMITS } from "@/lib/security/sanitize";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -42,6 +43,7 @@ export async function updateBusinessProfileAction(
     readLine(formData, "address", TEXT_LIMITS.address) ||
     readLine(formData, "street", TEXT_LIMITS.address);
   const phone = sanitizePhone(formData.get("phone"));
+  const gender = asGenderOrNull(formData.get("gender"));
   const description = readText(formData, "description", TEXT_LIMITS.description);
   const logo = formData.get("logo");
 
@@ -71,6 +73,7 @@ export async function updateBusinessProfileAction(
           address: address || null,
           phone: phone || null,
           logo_url: null,
+          gender,
         });
         profileId = created?.id;
       } catch (error) {
@@ -106,6 +109,7 @@ export async function updateBusinessProfileAction(
       address: address || null,
       phone: phone || null,
       logo_url: logoUrl,
+      gender,
     });
 
     if (logoUrl) {

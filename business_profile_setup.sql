@@ -5,6 +5,8 @@ alter table public.business_profiles
   add column if not exists phone text,
   add column if not exists logo_url text;
 
+notify pgrst, 'reload schema';
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'business-images',

@@ -6,6 +6,7 @@ import {
   reportSalonDisputeAction,
   type DisputeFormState,
 } from "@/app/disputes/actions";
+import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 
 const initialState: DisputeFormState = {};
 
@@ -20,6 +21,8 @@ export function ReportProblemButton({
   reportedUserId: string;
   role: "customer" | "salon";
 }) {
+  const t = useT();
+  const localize = useLocalize();
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
     role === "customer" ? reportCustomerDisputeAction : reportSalonDisputeAction,
@@ -31,7 +34,7 @@ export function ReportProblemButton({
   }
 
   if (state.success) {
-    return <p className="mt-3 text-xs text-ink-soft">{state.success}</p>;
+    return <p className="mt-3 text-xs text-ink-soft">{localize(state.success)}</p>;
   }
 
   return (
@@ -41,7 +44,7 @@ export function ReportProblemButton({
         onClick={() => setOpen((value) => !value)}
         className="ui-btn-secondary px-3 text-xs"
       >
-        Problem melden
+        {t("booking.reportProblem")}
       </button>
       {open ? (
         <form
@@ -51,12 +54,11 @@ export function ReportProblemButton({
           <input type="hidden" name="application_id" value={applicationId} />
           <input type="hidden" name="booking_id" value={bookingId ?? ""} />
           <input type="hidden" name="reported_user_id" value={reportedUserId} />
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">Streitfall</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">{t("booking.dispute")}</p>
           <p className="text-sm text-ink">
-            Beschreibe den Vorfall für den Plattform-Admin — z. B. unprofessionelle Arbeit oder unhöfliches
-            Verhalten.
+            {t("booking.disputeIntro")}
           </p>
-          {state.error ? <p className="ui-alert-error">{state.error}</p> : null}
+          {state.error ? <p className="ui-alert-error">{localize(state.error)}</p> : null}
           <textarea
             required
             name="description"
@@ -65,13 +67,13 @@ export function ReportProblemButton({
             maxLength={2000}
             placeholder={
               role === "customer"
-                ? "z. B. Salon hat unprofessionell gearbeitet…"
-                : "z. B. Modell war unhöflich…"
+                ? t("booking.disputePlaceholderCustomer")
+                : t("booking.disputePlaceholderSalon")
             }
             className="ui-input resize-y"
           />
           <button type="submit" disabled={pending} className="ui-btn-secondary px-4 text-xs">
-            {pending ? "Wird gesendet…" : "Meldung senden"}
+            {pending ? t("booking.sending") : t("booking.sendReport")}
           </button>
         </form>
       ) : null}

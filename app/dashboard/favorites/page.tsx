@@ -7,6 +7,8 @@ import { loadCustomerLoyalty } from "@/lib/loyalty/store";
 import { filterOffersForMember } from "@/lib/offers/load-active-offers";
 import { loadFavoriteOffers, loadFollowedSalonCards } from "@/lib/favorites/store";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { PageIntro, T } from "@/components/i18n/t";
+import { LocalizedText } from "@/components/i18n/localized-text";
 
 export const dynamic = "force-dynamic";
 
@@ -27,19 +29,17 @@ export default async function FavoritesPage() {
   }
 
   return (
-    <CustomerShell title="Favoriten" userName={profile.full_name} signedIn>
-      <div className="mb-10 max-w-2xl">
-        <p className="ui-kicker">Gespeichert</p>
-        <h1 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">Favoriten</h1>
-        <p className="mt-3 text-sm text-ink-soft">
-          Alle gelikten Angebote und abonnierten Salons — live aus deinem Konto.
-        </p>
-      </div>
+    <CustomerShell titleKey="nav.favorites" userName={profile.full_name} signedIn>
+      <PageIntro kicker="favorites.kicker" title="favorites.title" description="favorites.intro" />
 
       <section className="mb-12">
-        <h2 className="font-serif text-3xl text-ink">Gelikte Angebote</h2>
+        <h2 className="font-serif text-3xl text-ink">
+          <T k="favorites.likedOffers" />
+        </h2>
         {liked.length === 0 ? (
-          <div className="ui-empty mt-4">Noch keine Favoriten. Tippe auf das Herz bei einem Deal.</div>
+          <div className="ui-empty mt-4">
+            <T k="favorites.empty" />
+          </div>
         ) : (
           <div className="mt-6 grid gap-6 md:grid-cols-2">
             {liked.map((offer) => (
@@ -50,10 +50,12 @@ export default async function FavoritesPage() {
       </section>
 
       <section>
-        <h2 className="font-serif text-3xl text-ink">Abonnierte Salons</h2>
+        <h2 className="font-serif text-3xl text-ink">
+          <T k="favorites.followedSalons" />
+        </h2>
         {followed.length === 0 ? (
           <div className="ui-empty mt-4">
-            Auf einem Angebot «Salon abonnieren» tippen. Neue Deals erscheinen in deinen Mitteilungen.
+            <T k="favorites.emptyFollowed" />
           </div>
         ) : (
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -61,7 +63,9 @@ export default async function FavoritesPage() {
               <article key={salon.salon_id} className="ui-card flex items-center justify-between gap-3 p-5">
                 <div>
                   <p className="font-serif text-2xl text-ink">{salon.partner_name}</p>
-                  <p className="mt-1 text-sm text-ink-soft">{salon.region}</p>
+                  <p className="mt-1 text-sm text-ink-soft">
+                    <LocalizedText text={salon.region} />
+                  </p>
                 </div>
                 <FollowSalonButton salonId={salon.salon_id} initialFollowing />
               </article>

@@ -1,8 +1,8 @@
-import { ProfileLegalMenu } from "@/components/legal/profile-legal-menu";
 import { InviteSalonCard } from "@/components/business/invite-salon-card";
 import { BeforeAfterCarousel } from "@/components/portfolio/before-after-carousel";
 import { BusinessProfileForm } from "@/components/business/profile-form";
 import { SalonShell } from "@/components/business/salon-shell";
+import { SettingsHub } from "@/components/customer/settings-hub";
 import { ReceivedReviews } from "@/components/ratings/received-reviews";
 import { StarAverage } from "@/components/ratings/star-average";
 import { requireBusiness } from "@/lib/auth/require-business";
@@ -13,6 +13,7 @@ import { countReferralsInMonth, salonInvitePath } from "@/lib/referrals/store";
 import { loadUrgentMatchQuota } from "@/lib/offers/urgent-quota";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { headers } from "next/headers";
+import { PageIntro, T } from "@/components/i18n/t";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function BusinessProfilePage({
 }) {
   const { saved } = await searchParams;
   const { user, business } = await requireBusiness();
-  const salonName = business?.business_name || "Dein Salon";
+  const salonName = business?.business_name;
   const profile = business
     ? { ...business, logo_url: resolveLogoUrl(business.logo_url) }
     : null;
@@ -45,29 +46,20 @@ export default async function BusinessProfilePage({
 
   return (
     <SalonShell
-      salonName={salonName}
+      salonName={salonName || ""}
       location={business?.location}
       logoUrl={profile?.logo_url}
-      headerAction={<ProfileLegalMenu />}
     >
-      <div className="mb-10 max-w-3xl">
-        <p className="ui-kicker">
-          Kapitel 4.1 · Business Profile
-        </p>
-        <h1 className="mt-3 font-serif text-4xl text-ink sm:text-5xl">Profil bearbeiten</h1>
-        <StarAverage
-          average={salonRating.average}
-          count={salonRating.count}
-          className="mt-3"
-        />
-        <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-          Name, Ort und Logo für dein Salon-Konto. Lade andere Salons ein, um in diesem Monat ein Extra-Urgent-Slot zu erhalten.
-        </p>
-      </div>
+      <PageIntro kicker="profile.salonKicker" title="profile.salonTitle" description="profile.salonIntro" className="mb-10 max-w-3xl" />
+      <StarAverage
+        average={salonRating.average}
+        count={salonRating.count}
+        className="-mt-6 mb-10"
+      />
 
       {saved === "1" && (
         <p className="ui-alert-ok mb-8">
-          Profil gespeichert. Die Kundenseite zeigt jetzt deine aktuellen Daten.
+          <T k="profile.salonSaved" />
         </p>
       )}
 
@@ -75,9 +67,19 @@ export default async function BusinessProfilePage({
         <BusinessProfileForm userId={user.id} profile={profile} />
       </section>
 
-      <section className="ui-card mb-12 max-w-xl p-5 sm:p-8">
-        <p className="ui-kicker">Empfehlung</p>
-        <h2 className="mt-3 font-serif text-3xl text-ink">Salon einladen</h2>
+      <div className="flex max-w-xl flex-col gap-10">
+        <SettingsHub
+          variant="salon"
+          gender={business?.contact_gender ?? ""}
+          pushEnabled={business?.in_app_push ?? true}
+        />
+        <section className="ui-card mb-4 p-5 sm:p-8">
+        <p className="ui-kicker">
+          <T k="salon.recommendation" />
+        </p>
+        <h2 className="mt-3 font-serif text-3xl text-ink">
+          <T k="salon.inviteTitle" />
+        </h2>
         <div className="mt-5">
           <InviteSalonCard
             inviteUrl={`${origin.replace(/\/$/, "")}${salonInvitePath(user.id)}`}
@@ -86,12 +88,17 @@ export default async function BusinessProfilePage({
           />
         </div>
       </section>
+      </div>
 
       <section className="mb-12">
-        <p className="ui-kicker">Kapitel 4.9.1 · Ergebnisse</p>
-        <h2 className="mt-3 font-serif text-3xl text-ink">Vorher / Nachher</h2>
+        <p className="ui-kicker">
+          <T k="offer.resultsKicker" />
+        </p>
+        <h2 className="mt-3 font-serif text-3xl text-ink">
+          <T k="offer.beforeAfter" />
+        </h2>
         <p className="mt-2 max-w-2xl text-sm text-ink-soft">
-          Wische seitlich durch die Galerie. Modelle sehen dieselben Ergebnisse auf der Angebotsseite.
+          <T k="rating.galleryIntro" />
         </p>
         <div className="mt-6">
           <BeforeAfterCarousel pairs={portfolio} />

@@ -8,7 +8,7 @@ export function partnerSalonCode(stableId: string) {
 }
 
 export function partnerSalonLabel(stableId: string) {
-  return `Partner-Salon #${partnerSalonCode(stableId)}`;
+  return `Salon #${partnerSalonCode(stableId)}`;
 }
 
 export function regionLabel(city: string | null | undefined) {

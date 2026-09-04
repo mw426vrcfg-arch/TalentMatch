@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { loadBannerSenderNameAction } from "@/app/notifications/banner-actions";
-import { mapNotificationRow, type NotificationRow } from "@/lib/notifications/create";
+import { useLocalize, useT } from "@/components/i18n/i18n-provider";
+import { notificationCopy } from "@/lib/i18n/messages";
+import { mapNotificationRow, type NotificationRow } from "@/lib/notifications/rows";
+import { readPushEnabled, PUSH_PREF_EVENT } from "@/lib/notifications/push-pref";
 import { createClient } from "@/lib/supabase/client";
 import { mapChatMessage } from "@/lib/messages/store";
 
@@ -31,13 +34,48 @@ function shouldShowNotification(row: NotificationRow) {
   );
 }
 
+function notificationText(
+  item: NotificationRow,
+  t: ReturnType<typeof useT>,
+  localize: ReturnType<typeof useLocalize>,
+) {
+  const copy = notificationCopy(item.type, t);
+  const locTitle = localize(item.title);
+  const locBody = localize(item.message);
+  return {
+    title: locTitle !== item.title ? locTitle : copy.title.includes("{") ? locTitle : copy.title,
+    body: locBody !== item.message ? locBody : copy.body.includes("{") ? locBody : copy.body,
+  };
+}
+
 export function InAppPushToasts({ userId }: { userId: string }) {
+  const t = useT();
+  const localize = useLocalize();
   const [banner, setBanner] = useState<Banner | null>(null);
+  const [pushOn, setPushOn] = useState(true);
   const hideTimer = useRef<number | null>(null);
   const queue = useRef<Banner[]>([]);
   const showing = useRef(false);
 
+  useEffect(() => {
+    setPushOn(readPushEnabled());
+    function onPref(event: Event) {
+      const enabled = (event as CustomEvent<boolean>).detail !== false && readPushEnabled();
+      setPushOn(enabled);
+      if (!enabled) {
+        queue.current = [];
+        setBanner(null);
+        showing.current = false;
+      }
+    }
+    window.addEventListener(PUSH_PREF_EVENT, onPref);
+    return () => window.removeEventListener(PUSH_PREF_EVENT, onPref);
+  }, []);
+
   function enqueue(next: Banner) {
+    if (!readPushEnabled()) {
+      return;
+    }
     queue.current.push(next);
     void pump();
   }
@@ -82,7 +120,8 @@ export function InAppPushToasts({ userId }: { userId: string }) {
           if (!row || !shouldShowNotification(row)) {
             return;
           }
-          enqueue({ id: row.id, title: row.title, body: row.message });
+          const copy = notificationText(row, t, localize);
+          enqueue({ id: row.id, title: copy.title, body: copy.body });
         },
       )
       .subscribe();
@@ -120,9 +159,9 @@ export function InAppPushToasts({ userId }: { userId: string }) {
       void supabase.removeChannel(notifications);
       void supabase.removeChannel(messages);
     };
-  }, [userId]);
+  }, [localize, t, userId]);
 
-  if (!banner) {
+  if (!banner || !pushOn) {
     return null;
   }
 

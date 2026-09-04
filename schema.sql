@@ -14,7 +14,7 @@ create extension if not exists pgcrypto;
 
 create type public.user_role as enum ('customer', 'business', 'admin');
 
-create type public.offer_status as enum ('active', 'inactive', 'full');
+create type public.offer_status as enum ('active', 'inactive', 'full', 'expired');
 
 create type public.application_status as enum ('pending', 'accepted', 'rejected');
 
@@ -58,6 +58,8 @@ create table public.business_profiles (
   phone text,
   logo_url text,
   description text,
+  gender text,
+  contact_gender text,
   instagram text,
   stripe_account_id text,
   subscription_plan text not null default 'free',

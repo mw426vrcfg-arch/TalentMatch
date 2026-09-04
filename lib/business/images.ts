@@ -45,17 +45,22 @@ export async function ensureBusinessImagesBucket(
   return BUSINESS_IMAGES_BUCKET;
 }
 
-export function resolveLogoUrl(value: string | null | undefined) {
+export function resolveBusinessImageUrl(value: string | null | undefined) {
   if (!value?.trim()) {
     return null;
   }
 
-  if (/^https?:\/\//i.test(value)) {
-    return value.split("?")[0];
+  const trimmed = value.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed.split("?")[0];
   }
 
-  const path = value.replace(/^\/+/, "");
+  const path = trimmed.replace(/^\/+/, "").replace(/^business-images\//, "");
   return `${getSupabaseUrl()}/storage/v1/object/public/${BUSINESS_IMAGES_BUCKET}/${path}`;
+}
+
+export function resolveLogoUrl(value: string | null | undefined) {
+  return resolveBusinessImageUrl(value);
 }
 
 export async function uploadOfferImage(

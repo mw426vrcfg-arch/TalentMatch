@@ -101,6 +101,7 @@ export async function registerAction(
   const email = sanitizeEmail(formData.get("email"));
   const phone = sanitizePhone(formData.get("phone"));
   const password = readSecret(formData, "password");
+  const passwordConfirm = readSecret(formData, "password_confirm");
   const role = readLine(formData, "role", 20);
   const businessName = readLine(formData, "business_name", TEXT_LIMITS.name);
   const location = readLine(formData, "location", TEXT_LIMITS.location);
@@ -121,6 +122,10 @@ export async function registerAction(
 
   if (password.length < 8) {
     return { error: "Das Passwort muss mindestens 8 Zeichen haben." };
+  }
+
+  if (password !== passwordConfirm) {
+    return { error: "Die Passwörter stimmen nicht überein." };
   }
 
   if (role === "business" && (!businessName || !location)) {

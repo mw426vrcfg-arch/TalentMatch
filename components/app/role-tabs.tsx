@@ -1,6 +1,7 @@
 "use client";
 
 import { AppTabBar, type AppTabItem } from "@/components/app/app-tab-bar";
+import { useT } from "@/components/i18n/i18n-provider";
 
 const iconClass = "h-[22px] w-[22px]";
 
@@ -73,33 +74,29 @@ function ShopIcon(active: boolean) {
   );
 }
 
-export function customerTabs(): AppTabItem[] {
-  return [
-    { href: "/dashboard", label: "Home", icon: HomeIcon },
-    { href: "/dashboard/favorites", label: "Favoriten", icon: HeartIcon },
-    { href: "/dashboard/applications", label: "Bewerbungen", icon: ClipboardIcon },
-    { href: "/dashboard/profile", label: "Profil", icon: UserIcon },
-  ];
-}
-
-export function salonTabs(pendingCount = 0): AppTabItem[] {
-  return [
-    { href: "/business/dashboard", label: "Dashboard", icon: GridIcon },
-    {
-      href: "/business/applications",
-      label: "Bewerbungen",
-      badge: pendingCount,
-      icon: InboxIcon,
-    },
-    { href: "/business/offers", label: "Angebot", icon: PlusIcon },
-    { href: "/business/profile", label: "Profil", match: ["/business/profile"], icon: ShopIcon },
-  ];
-}
-
 export function CustomerTabBar() {
-  return <AppTabBar items={customerTabs()} />;
+  const t = useT();
+  const items: AppTabItem[] = [
+    { href: "/dashboard", label: t("nav.home"), icon: HomeIcon },
+    { href: "/dashboard/favorites", label: t("nav.favorites"), icon: HeartIcon },
+    { href: "/dashboard/applications", label: t("nav.applications"), icon: ClipboardIcon },
+    { href: "/dashboard/profile", label: t("nav.profile"), icon: UserIcon },
+  ];
+  return <AppTabBar items={items} />;
 }
 
 export function SalonTabBar({ pendingCount = 0 }: { pendingCount?: number }) {
-  return <AppTabBar items={salonTabs(pendingCount)} />;
+  const t = useT();
+  const items: AppTabItem[] = [
+    { href: "/business/dashboard", label: t("nav.dashboard"), icon: GridIcon },
+    {
+      href: "/business/applications",
+      label: t("nav.applications"),
+      badge: pendingCount,
+      icon: InboxIcon,
+    },
+    { href: "/business/offers", label: t("nav.offers"), icon: PlusIcon },
+    { href: "/business/profile", label: t("nav.profile"), match: ["/business/profile"], icon: ShopIcon },
+  ];
+  return <AppTabBar items={items} />;
 }
