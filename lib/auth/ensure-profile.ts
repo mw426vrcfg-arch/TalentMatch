@@ -1,5 +1,5 @@
 import { type User } from "@supabase/supabase-js";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { tryCreateAdminClient } from "@/lib/supabase/admin";
 import { type UserRole } from "@/lib/supabase/env";
 import { isReferralUserId, recordSalonReferral } from "@/lib/referrals/store";
 
@@ -19,8 +19,21 @@ function metadataRole(user: User): UserRole {
   return "customer";
 }
 
+export function profileFromUser(user: User): Profile {
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    role: metadataRole(user),
+    full_name: String(user.user_metadata?.full_name ?? ""),
+    phone: user.user_metadata?.phone ? String(user.user_metadata.phone) : null,
+  };
+}
+
 export async function ensureProfile(user: User): Promise<Profile> {
-  const admin = createAdminClient();
+  const admin = tryCreateAdminClient();
+  if (!admin) {
+    return profileFromUser(user);
+  }
   const role = metadataRole(user);
   const fullName = String(user.user_metadata?.full_name ?? "");
   const phone = user.user_metadata?.phone
@@ -104,16 +117,29 @@ export async function ensureProfile(user: User): Promise<Profile> {
 }
 
 export async function getProfile(userId: string) {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("users")
-    .select("id, email, role, full_name, phone")
-    .eq("id", userId)
-    .maybeSingle();
+  try {
+    const admin = tryCreateAdminClient();
+    if (!admin) {
+      return null;
+    }
 
-  if (error) {
-    throw new Error(error.message);
+    const { data, error } = await admin
+      .from("users")
+      .select("id, email, role, full_name, phone")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("Profil konnte nicht geladen werden:", error.message);
+      return null;
+    }
+
+    return data as Profile | null;
+  } catch (error) {
+    console.warn(
+      "Profil konnte nicht geladen werden:",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
   }
-
-  return data as Profile | null;
 }

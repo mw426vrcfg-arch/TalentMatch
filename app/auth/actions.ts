@@ -2,10 +2,11 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ensureProfile, getProfile } from "@/lib/auth/ensure-profile";
+import { type AuthState } from "@/lib/auth/auth-state";
+import { ensureProfile, getProfile, profileFromUser } from "@/lib/auth/ensure-profile";
 import { redirectPathForRole } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { tryCreateAdminClient } from "@/lib/supabase/admin";
 import { restoreCustomerIfEligible } from "@/lib/strikes/expire";
 import { getStrikeRestriction, isAuthBanError } from "@/lib/strikes/restriction";
 import { isReferralUserId } from "@/lib/referrals/store";
@@ -16,11 +17,6 @@ import {
   sanitizePhone,
   TEXT_LIMITS,
 } from "@/lib/security/sanitize";
-
-export type AuthState = {
-  error?: string;
-  success?: string;
-};
 
 function safeInternalPath(path: string) {
   if (path.startsWith("/") && !path.startsWith("//")) {
@@ -47,19 +43,24 @@ export async function loginAction(
   let { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error && isAuthBanError(error.message)) {
-    const admin = createAdminClient();
-    const { data: bannedUser } = await admin
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
+    try {
+      const admin = tryCreateAdminClient();
+      const { data: bannedUser } = admin
+        ? await admin.from("users").select("id").eq("email", email).maybeSingle()
+        : { data: null };
 
-    if (bannedUser?.id) {
-      const restored = await restoreCustomerIfEligible(String(bannedUser.id));
-      if (restored.length > 0) {
-        const retry = await supabase.auth.signInWithPassword({ email, password });
-        error = retry.error;
+      if (bannedUser?.id) {
+        const restored = await restoreCustomerIfEligible(String(bannedUser.id));
+        if (restored.length > 0) {
+          const retry = await supabase.auth.signInWithPassword({ email, password });
+          error = retry.error;
+        }
       }
+    } catch (restoreError) {
+      console.warn(
+        "Sperr-Check nach Login fehlgeschlagen:",
+        restoreError instanceof Error ? restoreError.message : restoreError,
+      );
     }
 
     if (error) {
@@ -80,13 +81,29 @@ export async function loginAction(
     return { error: "Sitzung konnte nicht erstellt werden." };
   }
 
-  const profile = (await getProfile(user.id)) ?? (await ensureProfile(user));
+  let profile;
+  try {
+    profile = (await getProfile(user.id)) ?? (await ensureProfile(user));
+  } catch (profileError) {
+    console.warn(
+      "Profil nach Login nicht verfügbar:",
+      profileError instanceof Error ? profileError.message : profileError,
+    );
+    profile = profileFromUser(user);
+  }
 
   if (profile.role === "customer") {
-    const restriction = await getStrikeRestriction(user.id);
-    if (restriction.banned) {
-      await supabase.auth.signOut();
-      return { error: restriction.message ?? "Dein Konto ist gesperrt." };
+    try {
+      const restriction = await getStrikeRestriction(user.id);
+      if (restriction.banned) {
+        await supabase.auth.signOut();
+        return { error: restriction.message ?? "Dein Konto ist gesperrt." };
+      }
+    } catch (strikeError) {
+      console.warn(
+        "Strike-Check nach Login übersprungen:",
+        strikeError instanceof Error ? strikeError.message : strikeError,
+      );
     }
   }
 

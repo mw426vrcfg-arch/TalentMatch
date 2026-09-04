@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { registerAction, type AuthState } from "@/app/auth/actions";
+import { registerAction } from "@/app/auth/actions";
+import { type AuthState } from "@/lib/auth/auth-state";
 import { PasswordField } from "@/components/auth/password-field";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 

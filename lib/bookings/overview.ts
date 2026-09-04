@@ -4,7 +4,7 @@ import { mapBusinessRow } from "@/lib/business/profile-store";
 import { resolveAvatarUrl } from "@/lib/customer/images";
 import { loadCustomerProfile } from "@/lib/customer/profile-store";
 import { APPLICATION_STATUS_LABEL } from "@/lib/applications/status";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, tryCreateAdminClient } from "@/lib/supabase/admin";
 
 export type AppointmentStatus = "confirmed" | "completed" | "no_show" | "accepted" | "swap_requested";
 
@@ -133,7 +133,10 @@ async function loadSalonVenue(admin: Admin, businessId: string) {
 }
 
 export async function loadSalonAppointments(businessId: string): Promise<AppointmentOverview[]> {
-  const admin = createAdminClient();
+  const admin = tryCreateAdminClient();
+  if (!admin) {
+    return [];
+  }
   const [{ data: offers, error: offerError }, venue] = await Promise.all([
     admin.from("offers").select("id, title, duration_minutes").eq("business_id", businessId),
     loadSalonVenue(admin, businessId),
@@ -249,7 +252,10 @@ export async function loadSalonAppointments(businessId: string): Promise<Appoint
 }
 
 export async function loadCustomerAppointments(customerId: string): Promise<AppointmentOverview[]> {
-  const admin = createAdminClient();
+  const admin = tryCreateAdminClient();
+  if (!admin) {
+    return [];
+  }
   const { data: applications, error: applicationError } = await admin
     .from("applications")
     .select("id, status, notes, offer_id, customer_id")

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ensureProfile, getProfile } from "@/lib/auth/ensure-profile";
+import { ensureProfile, getProfile, profileFromUser } from "@/lib/auth/ensure-profile";
 import { createClient } from "@/lib/supabase/server";
 import { getStrikeRestriction } from "@/lib/strikes/restriction";
 
@@ -13,7 +13,16 @@ export async function requireCustomer() {
     redirect("/login");
   }
 
-  const profile = (await getProfile(user.id)) ?? (await ensureProfile(user));
+  let profile;
+  try {
+    profile = (await getProfile(user.id)) ?? (await ensureProfile(user));
+  } catch (error) {
+    console.warn(
+      "Kundenprofil nicht verfügbar:",
+      error instanceof Error ? error.message : error,
+    );
+    profile = profileFromUser(user);
+  }
 
   if (profile.role === "business") {
     redirect("/business/dashboard");
@@ -38,5 +47,13 @@ export async function getOptionalProfile() {
     return null;
   }
 
-  return (await getProfile(user.id)) ?? (await ensureProfile(user));
+  try {
+    return (await getProfile(user.id)) ?? (await ensureProfile(user));
+  } catch (error) {
+    console.warn(
+      "Profil nicht verfügbar:",
+      error instanceof Error ? error.message : error,
+    );
+    return profileFromUser(user);
+  }
 }

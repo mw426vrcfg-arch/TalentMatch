@@ -5,7 +5,7 @@ import { loadActiveOffers, type BrowseOffer } from "@/lib/offers/load-active-off
 import { isUrgentFlag } from "@/lib/offers/urgent-flag";
 import { scheduleOfferExpiry } from "@/lib/offers/expire";
 import type { InspirationTile } from "@/lib/inspiration/types";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { tryCreateAdminClient } from "@/lib/supabase/admin";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object") {
@@ -16,7 +16,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 export async function loadInspirationFeed(customerId?: string | null): Promise<InspirationTile[]> {
   scheduleOfferExpiry();
-  const admin = createAdminClient();
+  const admin = tryCreateAdminClient();
+  if (!admin) {
+    return [];
+  }
   const blocked = customerId ? await loadBlockedSalons(customerId) : NO_BLOCKED_SALONS;
   const offers = filterBlockedOffers(await loadActiveOffers(), blocked);
   const offerBySalon = new Map<string, BrowseOffer>();

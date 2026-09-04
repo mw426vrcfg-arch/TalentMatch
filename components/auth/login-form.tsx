@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { loginAction, type AuthState } from "@/app/auth/actions";
+import { loginAction } from "@/app/auth/actions";
+import { type AuthState } from "@/lib/auth/auth-state";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
 import { PasswordField } from "@/components/auth/password-field";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";

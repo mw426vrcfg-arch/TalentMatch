@@ -1,11 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/env";
 
-export function createAdminClient() {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export function tryCreateAdminClient(): SupabaseClient | null {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
   if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY fehlt in .env.local");
+    return null;
   }
 
   return createClient(getSupabaseUrl(), serviceRoleKey, {
@@ -14,4 +14,14 @@ export function createAdminClient() {
       persistSession: false,
     },
   });
+}
+
+export function createAdminClient() {
+  const admin = tryCreateAdminClient();
+
+  if (!admin) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY fehlt in den Umgebungsvariablen");
+  }
+
+  return admin;
 }

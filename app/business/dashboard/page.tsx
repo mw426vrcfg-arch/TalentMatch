@@ -25,20 +25,21 @@ export default async function BusinessDashboardPage({
   const { user, business } = await requireBusiness();
   const salonName = business?.business_name;
 
+  const emptyAnalytics = {
+    matched_models: 0,
+    revenue_chf: 0,
+    utilization_percent: 0,
+    booked_slots: 0,
+    total_slots: 0,
+  };
   const [appointments, pendingRatings, averages, analytics, tiles] = await Promise.all([
-    business ? loadSalonAppointments(business.id) : Promise.resolve([]),
-    loadPendingRatingsForUser({ userId: user.id, role: "business" }),
-    loadSalonAverages([user.id]),
+    business ? loadSalonAppointments(business.id).catch(() => []) : Promise.resolve([]),
+    loadPendingRatingsForUser({ userId: user.id, role: "business" }).catch(() => []),
+    loadSalonAverages([user.id]).catch(() => new Map()),
     business
-      ? loadSalonAnalytics(business.id, user.id)
-      : Promise.resolve({
-          matched_models: 0,
-          revenue_chf: 0,
-          utilization_percent: 0,
-          booked_slots: 0,
-          total_slots: 0,
-        }),
-    loadInspirationFeed(null),
+      ? loadSalonAnalytics(business.id, user.id).catch(() => emptyAnalytics)
+      : Promise.resolve(emptyAnalytics),
+    loadInspirationFeed(null).catch(() => []),
   ]);
 
   const quickActions = business
@@ -46,7 +47,12 @@ export default async function BusinessDashboardPage({
         businessId: business.id,
         salonUserId: user.id,
         appointments,
-      })
+      }).catch(() => ({
+        todayCount: 0,
+        unansweredChats: 0,
+        urgentRemaining: 3,
+        urgentLimit: 3,
+      }))
     : { todayCount: 0, unansweredChats: 0, urgentRemaining: 3, urgentLimit: 3 };
 
   const salonRating = averages.get(user.id) ?? { average: null, count: 0 };

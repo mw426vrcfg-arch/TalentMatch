@@ -8,7 +8,7 @@ import { loadCustomerAppointments, splitAppointments } from "@/lib/bookings/over
 import { loadFavoriteOfferIds } from "@/lib/favorites/store";
 import { loadInspirationFeed } from "@/lib/inspiration/feed";
 import { loadCustomerLoyalty } from "@/lib/loyalty/store";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { tryCreateAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +19,18 @@ export default async function CustomerHomePage({
 }) {
   const { q } = await searchParams;
   const { user, profile, strikes } = await requireCustomer();
-  const loyalty = await loadCustomerLoyalty(createAdminClient(), user.id);
+  const admin = tryCreateAdminClient();
+  const loyalty = admin
+    ? await loadCustomerLoyalty(admin, user.id).catch(() => ({
+        points: 0,
+        level: "Bronze" as const,
+      }))
+    : { points: 0, level: "Bronze" as const };
   const [tiles, favoriteIds] = await Promise.all([
-    loadInspirationFeed(user.id),
+    loadInspirationFeed(user.id).catch(() => []),
     loadFavoriteOfferIds(user.id).catch(() => [] as string[]),
   ]);
-  const appointments = await loadCustomerAppointments(user.id);
+  const appointments = await loadCustomerAppointments(user.id).catch(() => []);
   const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Zurich" });
   const todayVisit = splitAppointments(appointments).upcoming.find((item) => {
     if (item.status !== "confirmed" && item.status !== "accepted") {

@@ -22,16 +22,33 @@ export function strikeLoginErrorParam(restriction: StrikeRestriction) {
 }
 
 export async function getStrikeRestriction(customerId: string): Promise<StrikeRestriction> {
+  const empty: StrikeRestriction = {
+    count: 0,
+    banned: false,
+    tempBlockedUntil: null,
+    message: null,
+  };
+
   try {
     await expireDueStrikes(customerId);
   } catch (error) {
-    console.error(
+    console.warn(
       "Strike-Verjährung fehlgeschlagen:",
       error instanceof Error ? error.message : error,
     );
   }
 
-  const admin = createAdminClient();
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (error) {
+    console.warn(
+      "Strike-Check übersprungen:",
+      error instanceof Error ? error.message : error,
+    );
+    return empty;
+  }
+
   const { data, error } = await admin
     .from("strikes")
     .select("id, created_at")
@@ -40,7 +57,8 @@ export async function getStrikeRestriction(customerId: string): Promise<StrikeRe
     .order("created_at", { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.warn("Strike-Check fehlgeschlagen:", error.message);
+    return empty;
   }
 
   const strikes = data ?? [];

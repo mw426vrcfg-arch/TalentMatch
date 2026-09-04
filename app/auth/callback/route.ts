@@ -34,7 +34,15 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login`);
   }
 
-  const existing = await getProfile(user.id);
+  let existing = null;
+  try {
+    existing = await getProfile(user.id);
+  } catch (profileError) {
+    console.warn(
+      "Profil im Auth-Callback nicht verfügbar:",
+      profileError instanceof Error ? profileError.message : profileError,
+    );
+  }
 
   if (existing) {
     const destination = next === "/reset-password" ? "/reset-password" : next || redirectPathForRole(existing.role);
@@ -43,10 +51,20 @@ export async function GET(request: Request) {
 
   // E-Mail-Registrierung: die Rolle steckt bereits in den Metadaten.
   if (String(user.user_metadata?.role ?? "").trim()) {
-    const profile = await ensureProfile(user);
-    return NextResponse.redirect(
-      `${origin}${next || redirectPathForRole(profile.role)}`,
-    );
+    try {
+      const profile = await ensureProfile(user);
+      return NextResponse.redirect(
+        `${origin}${next || redirectPathForRole(profile.role)}`,
+      );
+    } catch (profileError) {
+      console.warn(
+        "Profilanlage im Auth-Callback fehlgeschlagen:",
+        profileError instanceof Error ? profileError.message : profileError,
+      );
+      return NextResponse.redirect(
+        `${origin}${next || redirectPathForRole(String(user.user_metadata?.role ?? "customer"))}`,
+      );
+    }
   }
 
   const cookieStore = await cookies();
