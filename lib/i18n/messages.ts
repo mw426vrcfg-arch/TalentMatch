@@ -769,22 +769,22 @@ export const de = {
     impressumTitle: "Impressum",
     agbTitle: "Allgemeine Geschäftsbedingungen",
     privacyTitle: "Datenschutzerklärung",
-    updated: "Vorlage — Angaben bitte ergänzen",
-    updatedLegal: "Vorlage — vor Go-Live rechtlich prüfen",
+    updated: "Stand: 5. September 2026",
+    updatedLegal: "Stand: 5. September 2026",
     impressum: {
       provider: "Anbieter",
-      company: "[Firmenname / Betreiber]",
-      legalForm: "[Rechtsform, z. B. GmbH]",
-      street: "[Strasse und Hausnummer]",
-      city: "[PLZ Ort], Schweiz",
+      company: "Carlo Raghias",
+      legalForm: "Natürliche Person / Plattformbetreiber",
+      street: "Im Tscherfinger 10",
+      city: "8888 Heiligkreuz, Schweiz",
       contact: "Kontakt",
       email: "E-Mail: carlo.raghias@bluewin.ch",
-      phone: "Telefon: [+41 …]",
+      phone: "Kontakt ausschliesslich per E-Mail.",
       representative: "Vertretungsberechtigte Person",
-      representativeBody: "[Vorname Nachname], [Funktion]",
+      representativeBody: "Carlo Raghias (Plattform-Administrator)",
       register: "Handelsregister / UID",
-      registerOffice: "Handelsregisteramt: [Kanton]",
-      uid: "UID / CHE-Nummer: [CHE-XXX.XXX.XXX]",
+      registerOffice: "Kein Handelsregistereintrag (natürliche Person).",
+      uid: "UID / CHE-Nummer: nicht vorhanden.",
       liability: "Haftungshinweis",
       liabilityBody:
         "TalentMatch ist ein Marktplatz. Inhalte von Salons und Kunden sowie die Durchführung von Beauty-Dienstleistungen liegen in der Verantwortung der jeweiligen Nutzer. Weitere Hinweise finden sich in den AGB.",
@@ -793,7 +793,8 @@ export const de = {
       s1: "1. Geltungsbereich",
       s1p1:
         "Diese AGB gelten für die Nutzung der Plattform TalentMatch durch Salons (Anbieter) und Kunden bzw. Modelle (Nachfrager). Mit der Registrierung oder Nutzung akzeptierst du diese Bedingungen.",
-      s1p2: "Betreiber: [Firmenname, Adresse — siehe Impressum].",
+      s1p2:
+        "Betreiber: Carlo Raghias, Im Tscherfinger 10, 8888 Heiligkreuz, Schweiz (siehe Impressum).",
       s2: "2. Leistungsbeschreibung",
       s2p1:
         "TalentMatch vermittelt Termine für vergünstigte Beauty-Dienstleistungen. Die Plattform stellt Tools für Angebote, Bewerbungen, Buchungen, Bewertungen und das Strike-System bereit. Vertragspartner der eigentlichen Dienstleistung ist der Salon, nicht TalentMatch.",
@@ -817,39 +818,44 @@ export const de = {
       s5p3:
         "Die Sperrung nach dem dritten Strike ist eine vertraglich vereinbarte Massnahme zum Schutz der Salons und der übrigen Nutzer. Ein Anspruch auf Reaktivierung besteht nicht, soweit nicht zwingendes Recht entgegensteht.",
       s6: "6. Buchungen, Zahlung, Stornierung",
-      s6p1: "[Platzhalter: Zahlungsabwicklung, No-Show ohne Rückerstattung, Salon-Storno, Slot-Freigabe.]",
+      s6p1:
+        "Während der Startphase ist die Nutzung von TalentMatch kostenlos; allfällige spätere Servicegebühren werden rechtzeitig kommuniziert. Ein No-Show berechtigt den Salon, den Termin als nicht wahrgenommen zu werten; ein Anspruch auf Rückerstattung oder Ersatztermin gegenüber TalentMatch besteht nicht. Storniert der Salon, wird der Slot wieder freigegeben. Eine Stornierung durch das Modell weniger als 24 Stunden vor dem Termin kann einen Strike nach sich ziehen.",
       s7: "7. Bewertungen",
-      s7p1: "[Platzhalter: gegenseitige Reviews nach Abschluss, keine rechtswidrigen Inhalte.]",
+      s7p1:
+        "Nach Abschluss eines Termins können sich Salon und Modell gegenseitig bewerten. Bewertungen müssen sachlich sein und dürfen keine rechtswidrigen, beleidigenden oder wahrheitswidrigen Inhalte enthalten. TalentMatch kann unzulässige Bewertungen entfernen.",
       s8: "8. Pflichten der Nutzer",
       s8p1:
-        "[Platzhalter: wahrheitsgemässe Angaben, respektvoller Umgang, keine Umgehung der Plattform vor bestätigtem Termin.]",
+        "Nutzer machen wahrheitsgemässe Angaben, gehen respektvoll miteinander um und umgehen die Plattform nicht, um einen über TalentMatch angebahnten Termin vor der Bestätigung ausserhalb der Plattform abzuschliessen.",
       s9: "9. Änderungen und anwendbares Recht",
-      s9p1: "[Platzhalter: Schweizer Recht, Gerichtsstand [Ort], Salvatorische Klausel.]",
+      s9p1:
+        "Es gilt schweizerisches Recht. Ausschliesslicher Gerichtsstand ist Mels (SG), Schweiz, soweit gesetzlich zulässig. Sollte eine Bestimmung unwirksam sein, bleiben die übrigen Bestimmungen gültig.",
     },
     privacy: {
       s1: "1. Verantwortliche Stelle",
-      s1p1: "[Firmenname]",
-      s1p2: "[Adresse]",
+      s1p1: "Carlo Raghias",
+      s1p2: "Im Tscherfinger 10, 8888 Heiligkreuz, Schweiz",
       s1p3: "E-Mail: carlo.raghias@bluewin.ch",
       s2: "2. Welche Daten wir verarbeiten",
       s2p1:
-        "Kontodaten (Name, E-Mail, Rolle), Profildaten, Buchungs- und Bewerbungsdaten sowie technische Nutzungsdaten. Platzhalter: genaue Kategorien und Speicherdauer ergänzen.",
+        "Wir verarbeiten Kontodaten (Name, E-Mail, Rolle), Profildaten, Buchungs- und Bewerbungsdaten inkl. Haarfotos sowie technische Nutzungsdaten (z. B. Session, Geräte- und Sicherheitsprotokolle), soweit dies für den Betrieb der Plattform erforderlich ist.",
       s3: "3. Haar- und Bewerbungsfotos",
       s3p1:
         "Für Bewerbungen auf Angebote laden Kunden Haarfotos (Front, Seite, Hinterkopf) hoch. Diese Bilder dienen ausschliesslich dem Matching und der Prüfung durch den Salon. Details zur Einwilligung stehen in den AGB.",
       s4: "4. Zweck und Rechtsgrundlage",
       s4p1:
-        "[Platzhalter: Vertragserfüllung, berechtigte Interessen, Einwilligung — DSG / nDSG bzw. DSGVO, falls anwendbar.]",
+        "Die Verarbeitung erfolgt zur Vertragserfüllung (Nutzung der Plattform, Matching, Buchungen), aufgrund berechtigter Interessen (Sicherheit, Missbrauchsschutz, Strike-System) sowie — wo erforderlich — auf Grundlage deiner Einwilligung, namentlich nach dem schweizerischen Datenschutzgesetz (DSG / nDSG) und, soweit anwendbar, der DSGVO.",
       s5: "5. Empfänger",
       s5p1:
-        "Salons sehen Bewerbungsfotos und Profildaten nach einer Bewerbung. Nach Annahme eines Termins können Kontaktdaten ausgetauscht werden. Hosting: [Anbieter, z. B. Supabase / Region].",
+        "Salons sehen Bewerbungsfotos und Profildaten nach einer Bewerbung. Nach Annahme eines Termins können Kontaktdaten ausgetauscht werden. Das Hosting erfolgt bei Supabase Inc. und Vercel Inc.",
       s6: "6. Speicherdauer",
-      s6p1: "[Platzhalter: Dauer für Konten, Fotos, Buchungen und Strike-Protokolle.]",
+      s6p1:
+        "Kontodaten bleiben gespeichert, solange das Konto besteht. Haarfotos und Bewerbungsdaten werden für die Dauer der Bewerbung und des zugehörigen Termins sowie zur Streitbeilegung aufbewahrt. Buchungen und Strike-Protokolle speichern wir, solange sie für den Vertrag, gesetzliche Pflichten oder den Missbrauchsschutz erforderlich sind, danach werden sie gelöscht oder anonymisiert.",
       s7: "7. Ihre Rechte",
       s7p1:
         "Auskunft, Berichtigung, Löschung, Einschränkung und Widerspruch nach geltendem Datenschutzrecht. Anfragen an carlo.raghias@bluewin.ch.",
       s8: "8. Cookies und Analyse",
-      s8p1: "[Platzhalter: Session-Cookies für Login. Keine/weitere Tracker ergänzen.]",
+      s8p1:
+        "Wir setzen nur technisch notwendige Session-Cookies ein, insbesondere für Login und Sitzungssicherheit. Es werden keine Analyse-, Werbe- oder Tracking-Cookies verwendet.",
     },
   },
   errors: {
@@ -1749,22 +1755,22 @@ export const en: Messages = {
     impressumTitle: "Imprint",
     agbTitle: "Terms and conditions",
     privacyTitle: "Privacy policy",
-    updated: "Template — please complete the details",
-    updatedLegal: "Template — have this legally reviewed before go-live",
+    updated: "Last updated: 5 September 2026",
+    updatedLegal: "Last updated: 5 September 2026",
     impressum: {
       provider: "Provider",
-      company: "[Company name / operator]",
-      legalForm: "[Legal form, e.g. GmbH]",
-      street: "[Street and number]",
-      city: "[Postcode city], Switzerland",
+      company: "Carlo Raghias",
+      legalForm: "Natural person / platform operator",
+      street: "Im Tscherfinger 10",
+      city: "8888 Heiligkreuz, Switzerland",
       contact: "Contact",
       email: "Email: carlo.raghias@bluewin.ch",
-      phone: "Phone: [+41 …]",
+      phone: "Contact by email only.",
       representative: "Authorised representative",
-      representativeBody: "[First name last name], [role]",
+      representativeBody: "Carlo Raghias (platform administrator)",
       register: "Commercial register / UID",
-      registerOffice: "Commercial registry: [canton]",
-      uid: "UID / CHE number: [CHE-XXX.XXX.XXX]",
+      registerOffice: "No commercial register entry (natural person).",
+      uid: "UID / CHE number: none.",
       liability: "Liability notice",
       liabilityBody:
         "TalentMatch is a marketplace. Content from salons and clients and the delivery of beauty services are the responsibility of the respective users. Further details are in the terms.",
@@ -1773,7 +1779,7 @@ export const en: Messages = {
       s1: "1. Scope",
       s1p1:
         "These terms apply to the use of the TalentMatch platform by salons (providers) and clients or models (demand). By registering or using the service you accept these terms.",
-      s1p2: "Operator: [company name, address — see imprint].",
+      s1p2: "Operator: Carlo Raghias, Im Tscherfinger 10, 8888 Heiligkreuz, Switzerland (see imprint).",
       s2: "2. Service description",
       s2p1:
         "TalentMatch matches appointments for discounted beauty services. The platform provides tools for offers, applications, bookings, ratings and the strike system. The contract partner for the actual service is the salon, not TalentMatch.",
@@ -1797,39 +1803,44 @@ export const en: Messages = {
       s5p3:
         "Lockout after the third strike is a contractually agreed measure to protect salons and other users. There is no right to reactivation unless mandatory law requires otherwise.",
       s6: "6. Bookings, payment, cancellation",
-      s6p1: "[Placeholder: payment processing, no-show without refund, salon cancellation, slot release.]",
+      s6p1:
+        "During the launch phase, TalentMatch is free to use; any later service fees will be announced in time. A no-show entitles the salon to treat the appointment as missed; there is no claim against TalentMatch for a refund or replacement slot. If the salon cancels, the slot is released again. A cancellation by the model less than 24 hours before the appointment may result in a strike.",
       s7: "7. Ratings",
-      s7p1: "[Placeholder: mutual reviews after completion, no unlawful content.]",
+      s7p1:
+        "After an appointment is completed, salon and model may rate each other. Reviews must be factual and must not contain unlawful, insulting or untrue content. TalentMatch may remove inadmissible reviews.",
       s8: "8. User obligations",
       s8p1:
-        "[Placeholder: truthful information, respectful conduct, no bypassing the platform before a confirmed appointment.]",
+        "Users provide truthful information, treat each other respectfully and do not bypass the platform to conclude an appointment initiated on TalentMatch outside the platform before it is confirmed.",
       s9: "9. Changes and applicable law",
-      s9p1: "[Placeholder: Swiss law, place of jurisdiction [city], severability clause.]",
+      s9p1:
+        "Swiss law applies. The exclusive place of jurisdiction is Mels (SG), Switzerland, to the extent permitted by law. If any provision is invalid, the remaining provisions stay in force.",
     },
     privacy: {
       s1: "1. Controller",
-      s1p1: "[Company name]",
-      s1p2: "[Address]",
+      s1p1: "Carlo Raghias",
+      s1p2: "Im Tscherfinger 10, 8888 Heiligkreuz, Switzerland",
       s1p3: "Email: carlo.raghias@bluewin.ch",
       s2: "2. Which data we process",
       s2p1:
-        "Account data (name, email, role), profile data, booking and application data, and technical usage data. Placeholder: add exact categories and retention periods.",
+        "We process account data (name, email, role), profile data, booking and application data including hair photos, and technical usage data (e.g. session, device and security logs) as far as this is required to operate the platform.",
       s3: "3. Hair and application photos",
       s3p1:
         "To apply for offers, clients upload hair photos (front, side, back of the head). These images are used solely for matching and review by the salon. Consent details are in the terms.",
       s4: "4. Purpose and legal basis",
       s4p1:
-        "[Placeholder: contract performance, legitimate interests, consent — FADP / nFADP or GDPR if applicable.]",
+        "Processing is carried out to perform the contract (platform use, matching, bookings), on the basis of legitimate interests (security, abuse prevention, strike system) and — where required — on the basis of your consent, in particular under the Swiss Federal Act on Data Protection (FADP / nFADP) and, where applicable, the GDPR.",
       s5: "5. Recipients",
       s5p1:
-        "Salons see application photos and profile data after an application. After an appointment is accepted, contact details may be exchanged. Hosting: [provider, e.g. Supabase / region].",
+        "Salons see application photos and profile data after an application. After an appointment is accepted, contact details may be exchanged. Hosting is provided by Supabase Inc. and Vercel Inc.",
       s6: "6. Retention",
-      s6p1: "[Placeholder: duration for accounts, photos, bookings and strike records.]",
+      s6p1:
+        "Account data is stored for as long as the account exists. Hair photos and application data are kept for the duration of the application and the related appointment and for dispute resolution. Bookings and strike records are stored for as long as they are required for the contract, legal duties or abuse prevention, and are then deleted or anonymised.",
       s7: "7. Your rights",
       s7p1:
         "Access, rectification, erasure, restriction and objection under applicable data protection law. Requests to carlo.raghias@bluewin.ch.",
       s8: "8. Cookies and analytics",
-      s8p1: "[Placeholder: session cookies for login. Add or confirm that there are no further trackers.]",
+      s8p1:
+        "We use only technically necessary session cookies, in particular for login and session security. No analytics, advertising or tracking cookies are used.",
     },
   },
   errors: {
@@ -2725,22 +2736,22 @@ export const fr: Messages = {
     impressumTitle: "Mentions légales",
     agbTitle: "Conditions générales",
     privacyTitle: "Déclaration de protection des données",
-    updated: "Modèle — merci de compléter les indications",
-    updatedLegal: "Modèle — à faire vérifier juridiquement avant le go-live",
+    updated: "État : 5 septembre 2026",
+    updatedLegal: "État : 5 septembre 2026",
     impressum: {
       provider: "Prestataire",
-      company: "[Raison sociale / exploitant]",
-      legalForm: "[Forme juridique, p. ex. Sàrl]",
-      street: "[Rue et numéro]",
-      city: "[NPA localité], Suisse",
+      company: "Carlo Raghias",
+      legalForm: "Personne physique / exploitant de la plateforme",
+      street: "Im Tscherfinger 10",
+      city: "8888 Heiligkreuz, Suisse",
       contact: "Contact",
       email: "E-mail : carlo.raghias@bluewin.ch",
-      phone: "Téléphone : [+41 …]",
+      phone: "Contact uniquement par e-mail.",
       representative: "Personne habilitée à représenter",
-      representativeBody: "[Prénom nom], [fonction]",
+      representativeBody: "Carlo Raghias (administrateur de la plateforme)",
       register: "Registre du commerce / IDE",
-      registerOffice: "Office du registre du commerce : [canton]",
-      uid: "IDE / numéro CHE : [CHE-XXX.XXX.XXX]",
+      registerOffice: "Pas d’inscription au registre du commerce (personne physique).",
+      uid: "IDE / numéro CHE : aucun.",
       liability: "Avis de responsabilité",
       liabilityBody:
         "TalentMatch est une marketplace. Les contenus des salons et des clientes ainsi que la réalisation des prestations beauty relèvent de la responsabilité des utilisateurs concernés. D’autres indications figurent dans les CG.",
@@ -2749,7 +2760,8 @@ export const fr: Messages = {
       s1: "1. Champ d’application",
       s1p1:
         "Ces CG s’appliquent à l’utilisation de la plateforme TalentMatch par les salons (offreurs) et les clientes ou modèles (demandeurs). En t’inscrivant ou en utilisant le service, tu acceptes ces conditions.",
-      s1p2: "Exploitant : [raison sociale, adresse — voir mentions légales].",
+      s1p2:
+        "Exploitant : Carlo Raghias, Im Tscherfinger 10, 8888 Heiligkreuz, Suisse (voir mentions légales).",
       s2: "2. Description des prestations",
       s2p1:
         "TalentMatch met en relation des rendez-vous pour des prestations beauty à prix réduit. La plateforme fournit des outils pour offres, candidatures, bookings, évaluations et le système de strikes. Le partenaire contractuel de la prestation elle-même est le salon, pas TalentMatch.",
@@ -2773,39 +2785,44 @@ export const fr: Messages = {
       s5p3:
         "Le blocage après le troisième strike est une mesure contractuelle pour protéger les salons et les autres utilisateurs. Il n’existe pas de droit à la réactivation, sauf si le droit impératif s’y oppose.",
       s6: "6. Bookings, paiement, annulation",
-      s6p1: "[Placeholder : traitement des paiements, no-show sans remboursement, annulation salon, libération du créneau.]",
+      s6p1:
+        "Pendant la phase de lancement, l’utilisation de TalentMatch est gratuite ; d’éventuels frais de service ultérieurs seront communiqués à temps. Un no-show autorise le salon à considérer le rendez-vous comme manqué ; aucune prétention de remboursement ou de créneau de remplacement n’existe envers TalentMatch. Si le salon annule, le créneau est à nouveau libéré. Une annulation par le modèle moins de 24 heures avant le rendez-vous peut entraîner un strike.",
       s7: "7. Évaluations",
-      s7p1: "[Placeholder : reviews mutuelles après clôture, pas de contenus illicites.]",
+      s7p1:
+        "Après la clôture d’un rendez-vous, le salon et le modèle peuvent s’évaluer mutuellement. Les avis doivent être factuels et ne doivent contenir aucun contenu illicite, injurieux ou mensonger. TalentMatch peut supprimer les évaluations inadmissibles.",
       s8: "8. Devoirs des utilisateurs",
       s8p1:
-        "[Placeholder : informations sincères, respect, pas de contournement de la plateforme avant un rendez-vous confirmé.]",
+        "Les utilisateurs fournissent des informations sincères, se traitent avec respect et ne contournent pas la plateforme pour conclure hors plateforme un rendez-vous initié sur TalentMatch avant sa confirmation.",
       s9: "9. Modifications et droit applicable",
-      s9p1: "[Placeholder : droit suisse, for [lieu], clause de sauvegarde.]",
+      s9p1:
+        "Le droit suisse s’applique. Le for exclusif est Mels (SG), Suisse, dans la mesure permise par la loi. Si une disposition est invalide, les autres restent en vigueur.",
     },
     privacy: {
       s1: "1. Responsable du traitement",
-      s1p1: "[Raison sociale]",
-      s1p2: "[Adresse]",
+      s1p1: "Carlo Raghias",
+      s1p2: "Im Tscherfinger 10, 8888 Heiligkreuz, Suisse",
       s1p3: "E-mail : carlo.raghias@bluewin.ch",
       s2: "2. Quelles données nous traitons",
       s2p1:
-        "Données de compte (nom, e-mail, rôle), données de profil, données de booking et de candidature ainsi que données techniques d’utilisation. Placeholder : compléter les catégories exactes et la durée de conservation.",
+        "Nous traitons les données de compte (nom, e-mail, rôle), les données de profil, les données de booking et de candidature y compris les photos de cheveux, ainsi que les données techniques d’utilisation (p. ex. session, journaux d’appareil et de sécurité), dans la mesure nécessaire au fonctionnement de la plateforme.",
       s3: "3. Photos de cheveux et de candidature",
       s3p1:
         "Pour postuler à des offres, les clientes téléversent des photos de cheveux (face, profil, nuque). Ces images servent uniquement au matching et à l’examen par le salon. Les détails du consentement figurent dans les CG.",
       s4: "4. Finalité et base juridique",
       s4p1:
-        "[Placeholder : exécution du contrat, intérêts légitimes, consentement — LPD / nLPD ou RGPD, le cas échéant.]",
+        "Le traitement a lieu pour l’exécution du contrat (utilisation de la plateforme, matching, bookings), sur la base d’intérêts légitimes (sécurité, prévention des abus, système de strikes) et — le cas échéant — sur la base de ton consentement, notamment selon la loi fédérale suisse sur la protection des données (LPD / nLPD) et, le cas échéant, le RGPD.",
       s5: "5. Destinataires",
       s5p1:
-        "Les salons voient les photos de candidature et les données de profil après une candidature. Après acceptation d’un rendez-vous, des coordonnées peuvent être échangées. Hébergement : [prestataire, p. ex. Supabase / région].",
+        "Les salons voient les photos de candidature et les données de profil après une candidature. Après acceptation d’un rendez-vous, des coordonnées peuvent être échangées. L’hébergement est assuré par Supabase Inc. et Vercel Inc.",
       s6: "6. Durée de conservation",
-      s6p1: "[Placeholder : durée pour comptes, photos, bookings et protocoles de strikes.]",
+      s6p1:
+        "Les données de compte sont conservées tant que le compte existe. Les photos de cheveux et les données de candidature sont conservées pendant la durée de la candidature et du rendez-vous associé ainsi que pour le règlement des litiges. Les bookings et les protocoles de strikes sont conservés aussi longtemps qu’ils sont nécessaires au contrat, aux obligations légales ou à la prévention des abus, puis supprimés ou anonymisés.",
       s7: "7. Tes droits",
       s7p1:
         "Accès, rectification, effacement, limitation et opposition selon le droit applicable à la protection des données. Demandes à carlo.raghias@bluewin.ch.",
       s8: "8. Cookies et analyse",
-      s8p1: "[Placeholder : cookies de session pour le login. Compléter l’absence ou la présence d’autres trackers.]",
+      s8p1:
+        "Nous n’utilisons que des cookies de session techniquement nécessaires, notamment pour le login et la sécurité de la session. Aucun cookie d’analyse, de publicité ou de tracking n’est utilisé.",
     },
   },
   errors: {
