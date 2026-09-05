@@ -1,12 +1,16 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { registerAction } from "@/app/auth/actions";
 import { type AuthState } from "@/lib/auth/auth-state";
+import { isValidEmail, MIN_PASSWORD_LENGTH } from "@/lib/auth/credentials";
 import { PasswordField } from "@/components/auth/password-field";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 
 const initialState: AuthState = {};
+
+const ERROR_BANNER =
+  "ui-alert-error border-rose/40 bg-[#fff1f0] font-medium text-[#b42318]";
 
 type Role = "customer" | "business";
 
@@ -22,28 +26,57 @@ export function RegisterForm({
   const [role, setRole] = useState<Role>(initialRole);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [mismatch, setMismatch] = useState("");
+  const [clientError, setClientError] = useState("");
+  const [checking, setChecking] = useState(false);
   const [state, formAction, pending] = useActionState(registerAction, initialState);
+  const busy = checking || pending;
+
+  useEffect(() => {
+    if (!pending) {
+      setChecking(false);
+    }
+  }, [pending]);
+
+  const banner = clientError || (state.error ? localize(state.error) : "");
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    setChecking(true);
+    setClientError("");
+
+    const email = String(new FormData(event.currentTarget).get("email") ?? "");
+    if (!isValidEmail(email)) {
+      event.preventDefault();
+      setClientError(t("errors.invalidEmail"));
+      setChecking(false);
+      return;
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      event.preventDefault();
+      setClientError(t("errors.passwordMinLength"));
+      setChecking(false);
+      return;
+    }
+
+    if (password !== confirm) {
+      event.preventDefault();
+      setClientError(t("auth.passwordsMismatch"));
+      setChecking(false);
+    }
+  }
 
   const roleCard = (active: boolean) =>
     active ? "ui-choice-card-active" : "ui-choice-card";
 
   return (
-    <form
-      action={formAction}
-      onSubmit={(event) => {
-        if (password !== confirm) {
-          event.preventDefault();
-          setMismatch(t("auth.passwordsMismatch"));
-        }
-      }}
-      className="space-y-7"
-    >
-      {(state.error || mismatch) && (
-        <p className="ui-alert-error">{mismatch || localize(state.error ?? "")}</p>
-      )}
+    <form noValidate action={formAction} onSubmit={handleSubmit} className="space-y-7">
+      {banner ? (
+        <p role="alert" className={ERROR_BANNER}>
+          {banner}
+        </p>
+      ) : null}
 
-      {state.success && <p className="ui-alert-ok">{localize(state.success)}</p>}
+      {state.success && !banner ? <p className="ui-alert-ok">{localize(state.success)}</p> : null}
 
       <div>
         <p className="mb-2 text-sm text-ink-soft">{t("auth.registerAs")}</p>
@@ -104,7 +137,9 @@ export function RegisterForm({
             type="email"
             name="email"
             autoComplete="email"
+            inputMode="email"
             className="ui-input"
+            onChange={() => setClientError("")}
           />
         </label>
 
@@ -116,31 +151,31 @@ export function RegisterForm({
         <PasswordField
           required
           name="password"
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           autoComplete="new-password"
           label={t("auth.password")}
           value={password}
           onChange={(event) => {
             setPassword(event.target.value);
-            setMismatch("");
+            setClientError("");
           }}
         />
         <PasswordField
           required
           name="password_confirm"
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           autoComplete="new-password"
           label={t("auth.confirmPassword")}
           value={confirm}
           onChange={(event) => {
             setConfirm(event.target.value);
-            setMismatch("");
+            setClientError("");
           }}
         />
       </div>
 
-      <button type="submit" disabled={pending} className="ui-btn-primary w-full">
-        {pending ? t("auth.creatingAccount") : t("auth.register")}
+      <button type="submit" disabled={busy} className="ui-btn-primary w-full">
+        {busy ? t("auth.loading") : t("auth.register")}
       </button>
 
       {/* Stehen am Ende, sonst erzeugt space-y über dem ersten Block einen leeren Abstand. */}

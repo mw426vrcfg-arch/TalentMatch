@@ -3,6 +3,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { type AuthState } from "@/lib/auth/auth-state";
+import { isValidEmail, MIN_PASSWORD_LENGTH } from "@/lib/auth/credentials";
+import { mapSupabaseAuthError } from "@/lib/auth/map-auth-error";
 import { ensureProfile, getProfile, profileFromUser } from "@/lib/auth/ensure-profile";
 import { redirectPathForRole } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -39,8 +41,23 @@ export async function loginAction(
     return { error: "Bitte E-Mail und Passwort eingeben." };
   }
 
+  if (!isValidEmail(email)) {
+    return { error: "Bitte gib eine gültige E-Mail-Adresse ein." };
+  }
+
   const supabase = await createClient();
-  let { error } = await supabase.auth.signInWithPassword({ email, password });
+  let error;
+  try {
+    const result = await supabase.auth.signInWithPassword({ email, password });
+    error = result.error;
+  } catch (signInError) {
+    return {
+      error: mapSupabaseAuthError(
+        signInError instanceof Error ? signInError : { message: String(signInError) },
+        "E-Mail-Adresse oder Passwort ist falsch.",
+      ),
+    };
+  }
 
   if (error && isAuthBanError(error.message)) {
     try {
@@ -70,7 +87,9 @@ export async function loginAction(
       };
     }
   } else if (error) {
-    return { error: "Anmeldung fehlgeschlagen. Prüfe E-Mail und Passwort." };
+    return {
+      error: mapSupabaseAuthError(error, "E-Mail-Adresse oder Passwort ist falsch."),
+    };
   }
 
   const {
@@ -129,16 +148,16 @@ export async function registerAction(
     return { error: "Bitte Name, E-Mail und Passwort ausfüllen." };
   }
 
-  if (!email) {
-    return { error: "Bitte eine gültige E-Mail-Adresse angeben." };
+  if (!email || !isValidEmail(email)) {
+    return { error: "Bitte gib eine gültige E-Mail-Adresse ein." };
   }
 
   if (role !== "customer" && role !== "business") {
     return { error: "Bitte wählen, ob du dich als Kunde oder Salon registrierst." };
   }
 
-  if (password.length < 8) {
-    return { error: "Das Passwort muss mindestens 8 Zeichen haben." };
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { error: "Das Passwort muss mindestens 6 Zeichen lang sein." };
   }
 
   if (password !== passwordConfirm) {
@@ -173,7 +192,9 @@ export async function registerAction(
   });
 
   if (error) {
-    return { error: error.message };
+    return {
+      error: mapSupabaseAuthError(error, "Registrierung fehlgeschlagen. Bitte erneut versuchen."),
+    };
   }
 
   if (!data.user) {
