@@ -84,11 +84,11 @@ export async function createOfferAction(
   }
 
   if (!Number.isFinite(normalPrice) || normalPrice < 0) {
-    return { error: "Bitte einen gültigen Normal Price in CHF angeben." };
+    return { error: "Bitte einen gültigen Normalpreis in CHF angeben." };
   }
 
   if (!Number.isFinite(discountPrice) || discountPrice < 0) {
-    return { error: "Bitte einen gültigen Discount Price in CHF angeben." };
+    return { error: "Bitte einen gültigen Betrag für Unser Preis in CHF angeben." };
   }
 
   if (!Number.isInteger(durationMinutes) || durationMinutes <= 0) {
@@ -97,7 +97,7 @@ export async function createOfferAction(
 
   const scheduled = scheduleSlotsFromIso(slotStarts, durationMinutes);
   if (scheduled.error || !scheduled.slots) {
-    return { error: scheduled.error ?? "Bitte mindestens einen Available Slot setzen." };
+    return { error: scheduled.error ?? "Bitte mindestens eine Uhrzeit als freien Termin setzen." };
   }
 
   const slots = scheduled.slots;
@@ -260,10 +260,10 @@ export async function updateOfferAction(
     return { error: "Service Title und Description sind Pflichtfelder." };
   }
   if (!Number.isFinite(normalPrice) || normalPrice < 0) {
-    return { error: "Bitte einen gültigen Normal Price in CHF angeben." };
+    return { error: "Bitte einen gültigen Normalpreis in CHF angeben." };
   }
   if (!Number.isFinite(discountPrice) || discountPrice < 0) {
-    return { error: "Bitte einen gültigen Discount Price in CHF angeben." };
+    return { error: "Bitte einen gültigen Betrag für Unser Preis in CHF angeben." };
   }
   if (!Number.isInteger(durationMinutes) || durationMinutes <= 0) {
     return { error: "Duration muss in ganzen Minuten grösser als 0 sein." };
@@ -328,7 +328,7 @@ export async function updateOfferAction(
   if (freshStarts.length > 0) {
     const scheduled = scheduleSlotsFromIso([...existingStarts, ...freshStarts], durationMinutes);
     if (scheduled.error || !scheduled.slots) {
-      return { error: scheduled.error ?? "Die neuen Slots überschneiden sich mit bestehenden Zeiten." };
+      return { error: scheduled.error ?? "Die neuen Zeiten überschneiden sich mit bestehenden Terminen." };
     }
   }
 
@@ -380,7 +380,7 @@ export async function updateOfferAction(
   if (freshStarts.length > 0) {
     const scheduled = scheduleSlotsFromIso(freshStarts, durationMinutes);
     if (scheduled.error || !scheduled.slots) {
-      return { error: scheduled.error ?? "Neue Slots konnten nicht gespeichert werden." };
+      return { error: scheduled.error ?? "Neue Zeiten konnten nicht gespeichert werden." };
     }
     const { error: insertError } = await admin.from("offer_slots").insert(
       scheduled.slots.map(({ start, end }) => ({

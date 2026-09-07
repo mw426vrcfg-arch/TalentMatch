@@ -6,6 +6,7 @@ import { type AuthState } from "@/lib/auth/auth-state";
 import { isValidEmail, MIN_PASSWORD_LENGTH } from "@/lib/auth/credentials";
 import { PasswordField } from "@/components/auth/password-field";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 const initialState: AuthState = {};
 
@@ -17,9 +18,11 @@ type Role = "customer" | "business";
 export function RegisterForm({
   initialRole = "customer",
   referredBy = "",
+  returnTo = "",
 }: {
   initialRole?: Role;
   referredBy?: string;
+  returnTo?: string;
 }) {
   const t = useT();
   const localize = useLocalize();
@@ -174,12 +177,13 @@ export function RegisterForm({
         />
       </div>
 
-      <button type="submit" disabled={busy} className="ui-btn-primary w-full">
-        {busy ? t("auth.loading") : t("auth.register")}
+      <button type="submit" disabled={busy} aria-busy={busy} className="ui-btn-primary w-full">
+        {busy ? <BusyLabel>{t("auth.creatingAccount")}</BusyLabel> : t("auth.register")}
       </button>
 
       {/* Stehen am Ende, sonst erzeugt space-y über dem ersten Block einen leeren Abstand. */}
       <input type="hidden" name="role" value={role} />
+      <input type="hidden" name="redirectTo" value={returnTo} />
       {referredBy ? <input type="hidden" name="ref" value={referredBy} /> : null}
     </form>
   );

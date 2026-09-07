@@ -6,6 +6,8 @@ import { reportNoShowAction, type NoShowState } from "@/app/business/no-show-act
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { type ConfirmedBooking } from "@/lib/bookings/salon-confirmed";
 import { formatSlot } from "@/lib/offers/format";
+import { ConfirmedBadge } from "@/components/ui/confirmed-badge";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 const initialNoShow: NoShowState = {};
 const initialComplete: CompleteBookingState = {};
@@ -37,7 +39,7 @@ export function NoShowButton({ bookingId }: { bookingId: string }) {
           disabled={pending}
           className="ui-btn-danger"
         >
-          {pending ? t("booking.reporting") : t("booking.noShow")}
+          {pending ? <BusyLabel>{t("booking.reporting")}</BusyLabel> : t("booking.noShow")}
         </button>
       </form>
     </div>
@@ -59,7 +61,7 @@ export function CompleteButton({ bookingId }: { bookingId: string }) {
           disabled={pending}
           className="ui-btn-primary"
         >
-          {pending ? t("booking.completing") : t("booking.complete")}
+          {pending ? <BusyLabel>{t("booking.completing")}</BusyLabel> : t("booking.complete")}
         </button>
       </form>
     </div>
@@ -97,9 +99,7 @@ export function ConfirmedBookings({ bookings }: { bookings: ConfirmedBooking[] }
                   <p className="mt-1 text-sm text-ink-soft">{formatSlot(booking.start_time)}</p>
                   <p className="text-sm text-ink-soft">{booking.customer_email}</p>
                 </div>
-                <span className="ui-badge">
-                  {t("status.confirmed")}
-                </span>
+                <ConfirmedBadge label={t("status.confirmed")} />
               </div>
               <p className="mt-3 text-sm text-ink-soft">
                 {t("booking.strikesCount", { count: booking.active_strikes })}

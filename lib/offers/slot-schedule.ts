@@ -24,7 +24,7 @@ export function scheduleSlotsFromIso(
   durationMinutes: number,
 ): { slots?: ScheduledSlot[]; error?: string } {
   if (slotStarts.length === 0) {
-    return { error: "Bitte mindestens eine Uhrzeit als Available Slot setzen." };
+    return { error: "Bitte mindestens eine Uhrzeit als freien Termin setzen." };
   }
 
   const slots = slotStarts.map((startValue) => {
@@ -34,12 +34,12 @@ export function scheduleSlotsFromIso(
   });
 
   if (slots.some(({ start, end }) => Number.isNaN(start.getTime()) || end <= start)) {
-    return { error: "Mindestens ein Slot hat ein ungültiges Datum oder eine ungültige Uhrzeit." };
+    return { error: "Mindestens ein Termin hat ein ungültiges Datum oder eine ungültige Uhrzeit." };
   }
 
   const unique = new Set(slots.map(({ start }) => start.getTime()));
   if (unique.size !== slots.length) {
-    return { error: "Dieselbe Uhrzeit kann nicht zweimal als Slot gesetzt werden." };
+    return { error: "Dieselbe Uhrzeit kann nicht zweimal als freien Termin gesetzt werden." };
   }
 
   const ordered = slots.slice().sort((a, b) => a.start.getTime() - b.start.getTime());
@@ -49,7 +49,7 @@ export function scheduleSlotsFromIso(
     if (current.start < previous.end) {
       return {
         error:
-          "Slots dürfen sich nicht überschneiden. Passe die Uhrzeiten oder die Duration an.",
+          "Die neuen Zeiten überschneiden sich mit bestehenden Terminen.",
       };
     }
   }

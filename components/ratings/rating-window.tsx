@@ -10,6 +10,7 @@ import { type PendingRating } from "@/lib/ratings/store";
 import { formatSlot } from "@/lib/offers/format";
 import { useLocale, useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { intlLocale } from "@/lib/i18n/config";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 const initialState: RatingFormState = {};
 
@@ -113,7 +114,7 @@ function RatingCard({
           disabled={pending || ratingValue < 1}
           className="ui-btn-primary"
         >
-          {pending ? t("rating.sending") : t("rating.send")}
+          {pending ? <BusyLabel>{t("rating.sending")}</BusyLabel> : t("rating.send")}
         </button>
       </form>
     </article>

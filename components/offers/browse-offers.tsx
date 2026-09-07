@@ -5,9 +5,9 @@ import { isPerfectHairMatch } from "@/lib/hair/criteria";
 import { loadCustomerProfile } from "@/lib/customer/profile-store";
 import { filterBlockedOffers, loadBlockedSalons, NO_BLOCKED_SALONS } from "@/lib/blacklist/store";
 import { loadCustomerLoyalty } from "@/lib/loyalty/store";
-import { filterOffersForMember, loadActiveOffers } from "@/lib/offers/load-active-offers";
+import { filterOffersForMember, loadActiveOffers, type BrowseOffer } from "@/lib/offers/load-active-offers";
 import { scheduleOfferExpiry } from "@/lib/offers/expire";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { tryCreateAdminClient } from "@/lib/supabase/admin";
 
 export async function BrowseOffers({
   query,
@@ -19,9 +19,17 @@ export async function BrowseOffers({
   userId?: string | null;
 }) {
   scheduleOfferExpiry();
-  const admin = createAdminClient();
-  const allOffers = await loadActiveOffers();
-  const loyalty = userId ? await loadCustomerLoyalty(admin, userId) : { points: 0, level: "Bronze" as const };
+  let allOffers: BrowseOffer[] = [];
+  try {
+    allOffers = await loadActiveOffers();
+  } catch (error) {
+    console.error("Active offers load failed:", error instanceof Error ? error.message : error);
+  }
+  const admin = userId ? tryCreateAdminClient() : null;
+  const loyalty =
+    userId && admin
+      ? await loadCustomerLoyalty(admin, userId)
+      : { points: 0, level: "Bronze" as const };
   const blocked = userId ? await loadBlockedSalons(userId) : NO_BLOCKED_SALONS;
   const offers = filterBlockedOffers(filterOffersForMember(allOffers, loyalty.level), blocked);
   let favoriteIds: string[] = [];
@@ -33,7 +41,9 @@ export async function BrowseOffers({
       console.error("Favorites load failed:", error);
     }
     try {
-      const loaded = await loadCustomerProfile(admin, userId);
+      const loaded = admin
+        ? await loadCustomerProfile(admin, userId)
+        : { profile: null };
       if (loaded.profile?.hair) {
         matchIds = offers.filter((offer) => isPerfectHairMatch(loaded.profile!.hair, offer.hair)).map((offer) => offer.id);
       }

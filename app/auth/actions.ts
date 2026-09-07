@@ -12,6 +12,7 @@ import { tryCreateAdminClient } from "@/lib/supabase/admin";
 import { restoreCustomerIfEligible } from "@/lib/strikes/expire";
 import { getStrikeRestriction, isAuthBanError } from "@/lib/strikes/restriction";
 import { isReferralUserId } from "@/lib/referrals/store";
+import { readReturnTo } from "@/lib/auth/return-to";
 import {
   readLine,
   readSecret,
@@ -20,14 +21,6 @@ import {
   TEXT_LIMITS,
 } from "@/lib/security/sanitize";
 
-function safeInternalPath(path: string) {
-  if (path.startsWith("/") && !path.startsWith("//")) {
-    return path;
-  }
-
-  return "";
-}
-
 export async function loginAction(
   _prev: AuthState,
   formData: FormData,
@@ -35,7 +28,7 @@ export async function loginAction(
   const email = readLine(formData, "email", TEXT_LIMITS.email).toLowerCase();
   // Passwörter werden nie bereinigt – jedes Zeichen muss exakt erhalten bleiben.
   const password = readSecret(formData, "password");
-  const next = safeInternalPath(readLine(formData, "next", 512));
+  const next = readReturnTo(formData);
 
   if (!email || !password) {
     return { error: "Bitte E-Mail und Passwort eingeben." };
@@ -126,7 +119,9 @@ export async function loginAction(
     }
   }
 
-  redirect(next || redirectPathForRole(profile.role));
+  redirect(
+    profile.role === "customer" && next ? next : redirectPathForRole(profile.role),
+  );
 }
 
 export async function registerAction(
@@ -143,6 +138,7 @@ export async function registerAction(
   const location = readLine(formData, "location", TEXT_LIMITS.location);
   const rawRef = readLine(formData, "ref", 64);
   const referredBy = isReferralUserId(rawRef) ? rawRef : "";
+  const next = readReturnTo(formData);
 
   if (!fullName || !password) {
     return { error: "Bitte Name, E-Mail und Passwort ausfüllen." };
@@ -175,11 +171,16 @@ export async function registerAction(
     headerList.get("origin") ||
     "http://localhost:3000";
 
+  const callbackNext =
+    role === "customer" && next
+      ? `?next=${encodeURIComponent(next)}`
+      : "";
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/auth/callback`,
+      emailRedirectTo: `${origin}/auth/callback${callbackNext}`,
       data: {
         full_name: fullName,
         role,
@@ -218,7 +219,7 @@ export async function registerAction(
     };
   }
 
-  redirect(redirectPathForRole(role));
+  redirect(role === "customer" && next ? next : redirectPathForRole(role));
 }
 
 export async function signOutAction() {

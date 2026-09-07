@@ -33,9 +33,17 @@ export default async function CustomerApplicationsPage({
   return (
     <CustomerShell titleKey="nav.applications" userName={profile.full_name} signedIn>
       {applied === "1" ? (
-        <p className="ui-alert-ok mb-8">
-          <T k="applications.sent" />
-        </p>
+        <section className="mb-8 rounded-[28px] border border-emerald-200/80 bg-emerald-50/90 p-5 sm:p-6">
+          <p className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12.5 9.2 17 19 7" />
+            </svg>
+            <T k="applications.sentTitle" />
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-emerald-950/80">
+            <T k="applications.sent" />
+          </p>
+        </section>
       ) : null}
       <RatingWindow items={pendingRatings} role="customer" />
       <MeineTermine

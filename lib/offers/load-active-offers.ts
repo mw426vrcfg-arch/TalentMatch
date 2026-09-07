@@ -1,7 +1,7 @@
 import { canSeeVipOffer, type MemberLevel } from "@/lib/loyalty/levels";
 import { readHairProfile, type HairProfile } from "@/lib/hair/criteria";
 import { loadSalonAverages } from "@/lib/ratings/store";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/anon";
 import { OFFER_STATUS_EXPIRED } from "@/lib/offers/availability";
 import { partnerSalonLabel, regionLabel } from "@/lib/offers/anonymize";
 import { isUrgentFlag } from "@/lib/offers/urgent-flag";
@@ -34,6 +34,7 @@ export type BrowseOffer = {
   available_slots: number | null;
   image_url: string | null;
   hair: HairProfile;
+  service_type: string | null;
   slots: BrowseSlot[];
 };
 
@@ -58,6 +59,7 @@ type OfferQueryRow = {
   available_slots?: number | null;
   image_url?: string | null;
   business_id?: string | null;
+  service_type?: string | null;
   wanted_hair_structure?: string | null;
   wanted_hair_length?: string | null;
   wanted_hair_chemical?: string | null;
@@ -71,7 +73,7 @@ function asProfile(value: OfferQueryRow["business_profiles"]): ProfileFields | n
 }
 
 const FULL_OFFER_SELECT =
-  "id, title, description, requirements, normal_price, discount_price, duration_minutes, is_urgent, vip_early_access, status, available_slots, created_at, business_id, image_url, wanted_hair_structure, wanted_hair_length, wanted_hair_chemical, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
+  "id, title, description, requirements, normal_price, discount_price, duration_minutes, is_urgent, vip_early_access, status, available_slots, created_at, business_id, image_url, service_type, wanted_hair_structure, wanted_hair_length, wanted_hair_chemical, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
 const BASE_OFFER_SELECT =
   "id, title, description, requirements, normal_price, discount_price, duration_minutes, is_urgent, vip_early_access, status, available_slots, created_at, business_id, image_url, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
 const MIN_OFFER_SELECT =
@@ -83,13 +85,15 @@ const IMAGE_MIN_OFFER_SELECT =
 const LEGACY_OFFER_SELECT =
   "id, title, description, requirements, normal_price, discount_price, duration_minutes, status, created_at, business_id, business_profiles(id, user_id, location), offer_slots(id, start_time, is_booked)";
 
+type PublicOffersClient = Awaited<ReturnType<typeof createClient>>;
+
 async function fetchOfferRows(
   ids?: string[],
   statuses?: string[],
 ): Promise<OfferQueryRow[]> {
-  const admin = createAdminClient();
+  const supabase = await createClient();
   const run = async (columns: string) => {
-    let query = admin.from("offers").select(columns);
+    let query = supabase.from("offers").select(columns);
     if (ids && ids.length > 0) {
       query = query.in("id", ids);
     }
@@ -107,20 +111,24 @@ async function fetchOfferRows(
   const result = withImage.error ? await run(LEGACY_OFFER_SELECT) : withImage;
 
   if (result.error) {
-    throw new Error(result.error.message);
+    console.error("Active offers load failed:", result.error.message);
+    return [];
   }
 
   const rows = (result.data ?? []) as unknown as OfferQueryRow[];
-  return hydrateOfferImages(admin, await hydrateUrgentFlags(admin, rows));
+  return hydrateServiceTypes(
+    supabase,
+    await hydrateOfferImages(supabase, await hydrateUrgentFlags(supabase, rows)),
+  );
 }
 
-async function hydrateUrgentFlags(admin: ReturnType<typeof createAdminClient>, rows: OfferQueryRow[]) {
+async function hydrateUrgentFlags(supabase: PublicOffersClient, rows: OfferQueryRow[]) {
   if (rows.length === 0 || rows.some((row) => "is_urgent" in row && row.is_urgent !== undefined)) {
     return rows;
   }
 
   const ids = rows.map((row) => row.id);
-  const flagged = await admin.from("offers").select("id, is_urgent").in("id", ids);
+  const flagged = await supabase.from("offers").select("id, is_urgent").in("id", ids);
   if (flagged.error || !flagged.data) {
     return rows;
   }
@@ -135,7 +143,7 @@ async function hydrateUrgentFlags(admin: ReturnType<typeof createAdminClient>, r
   }));
 }
 
-async function hydrateOfferImages(admin: ReturnType<typeof createAdminClient>, rows: OfferQueryRow[]) {
+async function hydrateOfferImages(supabase: PublicOffersClient, rows: OfferQueryRow[]) {
   if (rows.length === 0) {
     return rows;
   }
@@ -143,7 +151,7 @@ async function hydrateOfferImages(admin: ReturnType<typeof createAdminClient>, r
   let withImages = rows;
   if (!rows.some((row) => "image_url" in row)) {
     const ids = rows.map((row) => row.id);
-    const extra = await admin.from("offers").select("id, image_url").in("id", ids);
+    const extra = await supabase.from("offers").select("id, image_url").in("id", ids);
     if (!extra.error && extra.data) {
       const byId = new Map(
         extra.data.map((row) => [String((row as { id: string }).id), (row as { image_url?: string | null }).image_url ?? null]),
@@ -158,6 +166,30 @@ async function hydrateOfferImages(admin: ReturnType<typeof createAdminClient>, r
   return withImages.map((row) => ({
     ...row,
     image_url: resolveBusinessImageUrl(row.image_url) ?? row.image_url ?? null,
+  }));
+}
+
+async function hydrateServiceTypes(supabase: PublicOffersClient, rows: OfferQueryRow[]) {
+  if (rows.length === 0 || rows.some((row) => typeof row.service_type === "string" && row.service_type.trim())) {
+    return rows;
+  }
+
+  const ids = rows.map((row) => row.id);
+  const extra = await supabase.from("offers").select("id, service_type").in("id", ids);
+  if (extra.error || !extra.data) {
+    return rows;
+  }
+
+  const byId = new Map(
+    extra.data.map((row) => [
+      String((row as { id: string }).id),
+      (row as { service_type?: string | null }).service_type ?? null,
+    ]),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    service_type: byId.get(row.id) ?? row.service_type ?? null,
   }));
 }
 
@@ -212,6 +244,7 @@ async function toBrowseOffers(
       available_slots: typeof row.available_slots === "number" ? row.available_slots : unbooked,
       image_url: resolveBusinessImageUrl(row.image_url ? String(row.image_url) : null),
       hair: readHairProfile(row),
+      service_type: row.service_type?.trim() || null,
       slots,
     };
   });
@@ -273,13 +306,18 @@ export async function loadOffersByIds(ids: string[]): Promise<BrowseOffer[]> {
 }
 
 export async function loadOfferById(id: string) {
-  const offers = await loadActiveOffers();
-  return offers.find((offer) => offer.id === id) ?? null;
+  const rows = await fetchOfferRows([id], ["active"]);
+  const mapped = await toBrowseOffers(rows, {
+    upcomingSlotsOnly: true,
+    requireSlots: true,
+    hideFullyBooked: true,
+  });
+  return mapped[0] ?? null;
 }
 
 export async function loadOfferSlot(slotId: string, offerId: string) {
-  const admin = createAdminClient();
-  const { data, error } = await admin
+  const supabase = await createClient();
+  const { data, error } = await supabase
     .from("offer_slots")
     .select("id, offer_id, start_time, end_time, is_booked")
     .eq("id", slotId)
@@ -287,7 +325,8 @@ export async function loadOfferSlot(slotId: string, offerId: string) {
     .maybeSingle();
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Offer slot load failed:", error.message);
+    return null;
   }
 
   if (!data) {
@@ -298,7 +337,7 @@ export async function loadOfferSlot(slotId: string, offerId: string) {
     return data;
   }
 
-  const { data: booking } = await admin
+  const { data: booking } = await supabase
     .from("bookings")
     .select("id")
     .eq("slot_id", slotId)

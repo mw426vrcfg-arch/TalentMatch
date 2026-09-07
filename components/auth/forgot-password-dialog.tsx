@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Sheet } from "@/components/settings/apple-sheet";
 import { useT } from "@/components/i18n/i18n-provider";
 import { createClient } from "@/lib/supabase/client";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 export function ForgotPasswordDialog({
   open,
@@ -73,8 +74,8 @@ export function ForgotPasswordDialog({
               className="ui-input"
             />
           </label>
-          <button type="submit" disabled={pending} className="ui-btn-primary w-full">
-            {pending ? t("auth.resetSending") : t("auth.resetSend")}
+          <button type="submit" disabled={pending} aria-busy={pending} className="ui-btn-primary w-full">
+            {pending ? <BusyLabel>{t("auth.resetSending")}</BusyLabel> : t("auth.resetSend")}
           </button>
         </form>
       )}

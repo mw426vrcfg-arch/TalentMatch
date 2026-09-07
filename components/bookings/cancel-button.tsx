@@ -8,6 +8,7 @@ import {
 } from "@/app/bookings/cancel-actions";
 import { Sheet } from "@/components/settings/apple-sheet";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
+import { BusyLabel } from "@/components/ui/busy-label";
 import { type MessageKey } from "@/lib/i18n/messages";
 import { isLateCancellation } from "@/lib/bookings/cancel-window";
 
@@ -118,8 +119,8 @@ export function CancelAppointmentButton({
               >
                 {t("booking.cancelKeep")}
               </button>
-              <button type="submit" disabled={pending} className="ui-btn-danger w-full">
-                {pending ? t("booking.cancelling") : t("booking.cancelConfirm")}
+              <button type="submit" disabled={pending} aria-busy={pending} className="ui-btn-danger w-full">
+                {pending ? <BusyLabel>{t("booking.cancelling")}</BusyLabel> : t("booking.cancelConfirm")}
               </button>
             </div>
           </form>

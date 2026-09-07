@@ -23,7 +23,7 @@ alter table public.customer_profiles add column if not exists last_bleaching tex
 alter table public.customer_profiles add column if not exists chemical_treatments text;
 alter table public.customer_profiles add column if not exists hair_thickness text;
 
--- Haar-Portfolio: bis zu 6 Bild-URLs aus dem Bucket customer-images
+-- Haar-Portfolio: bis zu 4 Bild-URLs aus dem Bucket customer-images
 alter table public.customer_profiles
   add column if not exists hair_portfolio jsonb not null default '[]'::jsonb;
 

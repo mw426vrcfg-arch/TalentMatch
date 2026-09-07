@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { HairProfileFields } from "@/components/hair/hair-profile-fields";
 import { TreatmentPassFields } from "@/components/customer/treatment-pass-fields";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
+import { BusyLabel } from "@/components/ui/busy-label";
 import {
   updateCustomerProfileAction,
   type CustomerProfileFormState,
@@ -77,8 +78,8 @@ export function CustomerProfileForm({
         pass={profile?.treatment_pass}
       />
 
-      <button type="submit" disabled={pending} className="ui-btn-primary w-full sm:w-auto">
-        {pending ? t("actions.saving") : t("actions.saveProfile")}
+      <button type="submit" disabled={pending} aria-busy={pending} className="ui-btn-primary w-full sm:w-auto">
+        {pending ? <BusyLabel>{t("actions.saving")}</BusyLabel> : t("actions.saveProfile")}
       </button>
     </form>
   );

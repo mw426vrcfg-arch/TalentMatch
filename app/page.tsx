@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/app/app-header";
+import { GuestAuthLinks } from "@/components/i18n/auth-buttons";
 import { T } from "@/components/i18n/t";
 import { WelcomeSlider } from "@/components/onboarding/welcome-slider";
 import { SiteFooter } from "@/components/site-footer";
@@ -16,9 +17,9 @@ export default function HomePage() {
 
       <AppHeader>
         <p className="app-header-brand font-serif text-2xl tracking-tight text-ink transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]">TalentMatch</p>
-        <Link href="/login" className="ui-btn-secondary px-5 text-sm">
-          <T k="home.signIn" />
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <GuestAuthLinks />
+        </div>
       </AppHeader>
 
       <section className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-6 pb-8 pt-16 text-center sm:px-8 sm:pb-12 sm:pt-24 lg:pt-28">
@@ -34,6 +35,9 @@ export default function HomePage() {
         <p className="mt-8 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
           <T k="home.intro" />
         </p>
+        <Link href="/offers" className="ui-btn-primary mt-10 px-8">
+          <T k="home.browseCta" />
+        </Link>
       </section>
 
       <section className="relative z-10 mx-auto grid max-w-5xl gap-6 px-6 pb-16 pt-10 sm:px-8 lg:grid-cols-2 lg:gap-8 lg:pb-20 lg:pt-16">

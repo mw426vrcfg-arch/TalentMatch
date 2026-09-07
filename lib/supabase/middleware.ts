@@ -2,6 +2,30 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseAnonKey, getSupabaseUrl, redirectPathForRole } from "@/lib/supabase/env";
 import { getStrikeRestriction } from "@/lib/strikes/restriction";
+import { readReturnTo, safeInternalPath } from "@/lib/auth/return-to";
+
+function isOfferApplyPath(path: string) {
+  return /\/offers\/[^/]+\/apply(?:\/|$)/.test(path);
+}
+
+/** Startseite, Marktplatz und Angebotsdetails — ohne Login erreichbar. */
+function isPublicMarketplacePath(path: string) {
+  if (path === "/" || path === "/offers") {
+    return true;
+  }
+  return /^\/offers\/[^/]+\/?$/.test(path) && !isOfferApplyPath(path);
+}
+
+/** Nur Kunden-/Salon-Bereiche und die Bewerbung selbst verlangen eine Session. */
+function isProtectedAppPath(path: string) {
+  return (
+    path.startsWith("/dashboard") ||
+    path.startsWith("/business") ||
+    path.startsWith("/profile") ||
+    path.startsWith("/settings") ||
+    isOfferApplyPath(path)
+  );
+}
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -32,10 +56,7 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isAuthPage = path === "/login" || path === "/register";
   const isPasswordReset = path === "/reset-password";
-  const isProtected =
-    path.startsWith("/dashboard") ||
-    path.startsWith("/business") ||
-    path.includes("/apply");
+  const isProtected = isProtectedAppPath(path);
 
   const role = user?.user_metadata?.role as string | undefined;
   const provider = user?.app_metadata?.provider as string | undefined;
@@ -79,8 +100,12 @@ export async function updateSession(request: NextRequest) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.search = "";
-    loginUrl.searchParams.set("next", `${path}${request.nextUrl.search}`);
+    loginUrl.searchParams.set("redirectTo", `${path}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (!user && isPublicMarketplacePath(path)) {
+    return response;
   }
 
   if (isPasswordReset) {
@@ -89,7 +114,14 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthPage) {
     const role = (user.user_metadata?.role as string | undefined) ?? "customer";
+    const dest = readReturnTo(request.nextUrl.searchParams);
     const redirectUrl = request.nextUrl.clone();
+    if (dest && role !== "business" && role !== "admin") {
+      const [pathname, search = ""] = dest.split("?");
+      redirectUrl.pathname = safeInternalPath(pathname) || redirectPathForRole(role);
+      redirectUrl.search = search ? `?${search}` : "";
+      return NextResponse.redirect(redirectUrl);
+    }
     redirectUrl.pathname = redirectPathForRole(role);
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
@@ -109,11 +141,7 @@ export async function updateSession(request: NextRequest) {
       inboxUrl.search = "";
       return NextResponse.redirect(inboxUrl);
     }
-    if (
-      path.startsWith("/dashboard") ||
-      path === "/offers" ||
-      /\/offers\/[^/]+\/apply(?:\/|$)/.test(path)
-    ) {
+    if (path.startsWith("/dashboard") || isOfferApplyPath(path)) {
       const salonUrl = request.nextUrl.clone();
       salonUrl.pathname = "/business/dashboard";
       salonUrl.search = "";

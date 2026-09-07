@@ -15,7 +15,7 @@ import { VipWaitNotice } from "@/components/offers/vip-wait-notice";
 import { loadOfferAccess } from "@/lib/loyalty/offer-access";
 import { earliestUnbookedSlot } from "@/lib/offers/load-active-offers";
 import { loadSalonBeforeAfter } from "@/lib/portfolio/before-after";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { tryCreateAdminClient } from "@/lib/supabase/admin";
 import { StarAverage } from "@/components/ratings/star-average";
 import { UrgentBadge } from "@/components/offers/offer-card";
 import { CoverImage } from "@/components/ui/cover-image";
@@ -24,6 +24,9 @@ import { SlotChoices } from "@/components/offers/slot-choices";
 import { T } from "@/components/i18n/t";
 import { LocalizedText } from "@/components/i18n/localized-text";
 import { resolveLogoUrl } from "@/lib/business/images";
+import { applyReturnPath, guestApplyLoginHref } from "@/lib/auth/return-to";
+import { offerServiceTag } from "@/lib/offers/service-type";
+import { partnerInitial } from "@/lib/offers/anonymize";
 
 export default async function OfferDetailPage({
   params,
@@ -43,18 +46,25 @@ export default async function OfferDetailPage({
   const signedIn = profile?.role === "customer";
   const offerVisible = isSalon || access.visible;
   const canApply = !isSalon && access.visible;
+  const serviceTag = offerServiceTag(offer.service_type, offer.title);
   const backHref = isSalon ? "/business/dashboard" : signedIn ? "/dashboard" : "/offers";
   let favoriteIds: string[] = [];
   let followedIds: string[] = [];
   let perfectMatch = false;
-  const gallery = offer.salon_user_id ? await loadSalonBeforeAfter(offer.salon_user_id) : [];
+  let gallery: Awaited<ReturnType<typeof loadSalonBeforeAfter>> = [];
+  try {
+    gallery = offer.salon_user_id ? await loadSalonBeforeAfter(offer.salon_user_id) : [];
+  } catch (error) {
+    console.error("Portfolio load failed:", error);
+  }
   if (signedIn) {
     try {
       [favoriteIds, followedIds] = await Promise.all([
         loadFavoriteOfferIds(profile.id),
         loadFollowedSalonIds(profile.id),
       ]);
-      const loaded = await loadCustomerProfile(createAdminClient(), profile.id);
+      const admin = tryCreateAdminClient();
+      const loaded = admin ? await loadCustomerProfile(admin, profile.id) : { profile: null };
       if (loaded.profile?.hair) {
         perfectMatch = isPerfectHairMatch(loaded.profile.hair, offer.hair);
       }
@@ -74,13 +84,14 @@ export default async function OfferDetailPage({
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/20 bg-white/70 font-serif text-2xl text-zinc-600 backdrop-blur-md">
-                #
+                {partnerInitial(offer.partner_name)}
               </div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="ui-kicker">
                     <LocalizedText text={offer.region} />
                   </p>
+                  {serviceTag ? <p className="ui-kicker">{serviceTag}</p> : null}
                   {offer.is_urgent ? <UrgentBadge /> : null}
                   {offer.is_urgent && earliestUnbookedSlot(offer) ? (
                     <UrgentCountdown iso={earliestUnbookedSlot(offer)!.start_time} />
@@ -180,7 +191,21 @@ export default async function OfferDetailPage({
               <T k="offer.vipSlotsLocked" />
             </p>
           )}
-          {offerVisible ? <SlotChoices offerId={offer.id} slots={offer.slots} canApply={canApply} /> : null}
+          {offerVisible ? (
+            <SlotChoices offerId={offer.id} slots={offer.slots} canApply={canApply} signedIn={signedIn} />
+          ) : null}
+          {canApply ? (
+            <Link
+              href={
+                signedIn
+                  ? applyReturnPath(offer.id, offer.slots.find((slot) => !slot.is_booked)?.id)
+                  : guestApplyLoginHref(offer.id)
+              }
+              className="ui-btn-primary mt-6 w-full"
+            >
+              <T k="offer.applyCta" />
+            </Link>
+          ) : null}
         </aside>
       </article>
     </>

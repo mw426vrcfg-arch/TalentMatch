@@ -49,10 +49,18 @@ export function SkeletonCard({
  * Rahmen für Route-Skeletons: gleiche Kopfzeile, gleicher Inhaltsbereich und
  * gleiche Tab-Leiste wie die echten Shells, damit beim Wechsel nichts springt.
  */
-export function SkeletonScreen({ tabs = 4, children }: { tabs?: number; children: React.ReactNode }) {
+export function SkeletonScreen({
+  tabs = 4,
+  showTabBar = true,
+  children,
+}: {
+  tabs?: number;
+  showTabBar?: boolean;
+  children: React.ReactNode;
+}) {
   const t = useT();
   return (
-    <main className="min-h-screen pb-24" role="status" aria-label={t("common.loadingContent")}>
+    <main className={showTabBar ? "min-h-screen pb-24" : "min-h-screen"} role="status" aria-label={t("common.loadingContent")}>
       <AppHeader>
         <div className="min-w-0">
           <p className="app-header-brand font-serif text-xl tracking-tight text-ink">TalentMatch</p>
@@ -66,6 +74,7 @@ export function SkeletonScreen({ tabs = 4, children }: { tabs?: number; children
 
       <div className="app-screen mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">{children}</div>
 
+      {showTabBar ? (
       <nav
         aria-hidden
         className="ui-tabbar pb-[env(safe-area-inset-bottom)]"
@@ -79,6 +88,7 @@ export function SkeletonScreen({ tabs = 4, children }: { tabs?: number; children
           ))}
         </ul>
       </nav>
+      ) : null}
     </main>
   );
 }

@@ -29,7 +29,7 @@ export async function loadSwapSlotsAction(
   } catch (error) {
     return {
       slots: [],
-      error: error instanceof Error ? error.message : "Freie Slots konnten nicht geladen werden.",
+      error: error instanceof Error ? error.message : "Freie Termine konnten nicht geladen werden.",
     };
   }
 }

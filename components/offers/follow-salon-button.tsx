@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toggleFollowAction } from "@/app/favorites/actions";
 import { useT } from "@/components/i18n/i18n-provider";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 export function FollowSalonButton({
   salonId,
@@ -39,8 +40,15 @@ export function FollowSalonButton({
         });
       }}
       className={following ? "ui-btn-primary" : "ui-btn-secondary"}
+      aria-busy={pending}
     >
-      {following ? t("actions.unfollow") : t("actions.follow")}
+      {pending ? (
+        <BusyLabel>{t("common.sending")}</BusyLabel>
+      ) : following ? (
+        t("actions.unfollow")
+      ) : (
+        t("actions.follow")
+      )}
     </button>
   );
 }

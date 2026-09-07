@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PasswordField } from "@/components/auth/password-field";
 import { useT } from "@/components/i18n/i18n-provider";
 import { createClient } from "@/lib/supabase/client";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 export function ResetPasswordForm() {
   const t = useT();
@@ -101,8 +102,8 @@ export function ResetPasswordForm() {
         />
       </div>
 
-      <button type="submit" disabled={!ready || pending} className="ui-btn-primary w-full">
-        {pending ? t("auth.savingPassword") : t("auth.savePassword")}
+      <button type="submit" disabled={!ready || pending} aria-busy={pending} className="ui-btn-primary w-full">
+        {pending ? <BusyLabel>{t("auth.savingPassword")}</BusyLabel> : t("auth.savePassword")}
       </button>
     </form>
   );

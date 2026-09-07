@@ -8,6 +8,8 @@ import { type CustomerApplication } from "@/lib/applications/queries";
 import { formatSlot } from "@/lib/offers/format";
 import { intlLocale } from "@/lib/i18n/config";
 import { useLocale } from "@/components/i18n/i18n-provider";
+import { ConfirmedBadge } from "@/components/ui/confirmed-badge";
+import { EmptyExplore } from "@/components/ui/empty-explore";
 
 function statusKey(status: string): MessageKey {
   if (status === "accepted" || status === "confirmed") {
@@ -63,7 +65,9 @@ export function MyApplications({
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {applications.length === 0 ? (
-          <div className="ui-empty md:col-span-2">{t("applications.empty")}</div>
+          <div className="md:col-span-2">
+            <EmptyExplore messageKey="empty.noRequests" />
+          </div>
         ) : (
           applications.map((application) => {
             const badgeStatus =
@@ -72,21 +76,27 @@ export function MyApplications({
                 : application.booking_status === "confirmed"
                   ? "confirmed"
                   : application.status;
+            const isConfirmed = badgeStatus === "confirmed" || badgeStatus === "accepted";
+            const isPending = badgeStatus === "pending";
             return (
               <article key={application.id} className="ui-card p-5">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-serif text-2xl text-ink">{application.offer_title}</h3>
-                  <span
-                    className={`ui-badge shrink-0 ${
-                      application.booking_status === "confirmed" || application.status === "accepted"
-                        ? "bg-zinc-900 text-cream"
-                        : application.status === "rejected"
+                  {isConfirmed ? (
+                    <ConfirmedBadge label={t("status.confirmed")} />
+                  ) : (
+                    <span
+                      className={`ui-badge shrink-0 ${
+                        application.status === "rejected"
                           ? "bg-rose/10 text-rose"
-                          : ""
-                    }`}
-                  >
-                    {t(statusKey(badgeStatus))}
-                  </span>
+                          : isPending
+                            ? "border-amber-300/70 bg-amber-50 text-amber-900"
+                            : ""
+                      }`}
+                    >
+                      {t(statusKey(badgeStatus))}
+                    </span>
+                  )}
                 </div>
                 {application.identity_revealed ? (
                   <div className="mt-3 space-y-1 text-sm text-ink">

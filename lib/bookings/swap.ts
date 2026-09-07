@@ -158,7 +158,7 @@ export async function requestSlotSwap(input: {
   const wanted = candidates.find((slot) => slot.id === input.requestedSlotId);
 
   if (!wanted) {
-    throw new Error("Dieser Slot ist nicht mehr frei. Bitte wähle eine andere Uhrzeit.");
+    throw new Error("Diese Zeit ist nicht mehr frei. Bitte wähle eine andere Uhrzeit.");
   }
 
   const full = await admin

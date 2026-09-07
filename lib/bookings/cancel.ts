@@ -226,7 +226,7 @@ export async function cancelAppointment(input: {
       userId: application.customer_id as string,
       type: cancelType,
       title: "Dringend: Termin storniert",
-      message: `Dein Termin „${service}“ wurde vom Salon storniert. Der Slot ist wieder frei.`,
+      message: `Dein Termin „${service}“ wurde vom Salon storniert. Die Zeit ist wieder frei.`,
       applicationId: application.id as string,
       offerId: application.offer_id as string,
     });
@@ -242,8 +242,8 @@ export async function cancelAppointment(input: {
       type: cancelType,
       title: late ? "Kurzfristige Stornierung" : "Termin storniert",
       message: late
-        ? `Ein Modell hat „${service}“ weniger als 24 Stunden vorher storniert. Der Slot ist wieder frei.`
-        : `Ein Modell hat „${service}“ storniert. Der Slot ist wieder frei.`,
+        ? `Jemand hat „${service}“ weniger als 24 Stunden vorher storniert. Die Zeit ist wieder frei.`
+        : `Jemand hat „${service}“ storniert. Die Zeit ist wieder frei.`,
       applicationId: application.id as string,
       offerId: application.offer_id as string,
     });

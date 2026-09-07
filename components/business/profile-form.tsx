@@ -10,6 +10,7 @@ import { type BusinessProfile } from "@/lib/business/profile-store";
 import { resolveLogoUrl } from "@/lib/business/images";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { type GenderValue } from "@/lib/profile/gender";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 const initialState: ProfileFormState = {};
 
@@ -204,9 +205,10 @@ export function BusinessProfileForm({
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending}
         className="ui-btn-primary w-full sm:w-auto"
       >
-        {pending ? t("actions.saving") : t("actions.saveProfile")}
+        {pending ? <BusyLabel>{t("actions.saving")}</BusyLabel> : t("actions.saveProfile")}
       </button>
     </form>
   );

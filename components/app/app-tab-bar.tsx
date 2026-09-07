@@ -14,7 +14,8 @@ export type AppTabItem = {
 };
 
 function isActive(pathname: string, item: AppTabItem) {
-  if (pathname === item.href) {
+  const hrefPath = item.href.split("?")[0];
+  if (pathname === hrefPath || pathname === item.href) {
     return true;
   }
   return (item.match ?? []).some((prefix) => pathname.startsWith(prefix));
@@ -23,6 +24,10 @@ function isActive(pathname: string, item: AppTabItem) {
 export function AppTabBar({ items }: { items: AppTabItem[] }) {
   const pathname = usePathname();
   const t = useT();
+
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
     <nav

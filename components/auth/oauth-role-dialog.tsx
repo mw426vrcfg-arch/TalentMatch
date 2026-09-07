@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { completeOAuthRoleAction, type RoleState } from "@/app/auth/role/actions";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 const initialState: RoleState = {};
 
@@ -94,7 +95,7 @@ export function OAuthRoleDialog({
             disabled={pending}
             className="ui-btn-primary w-full"
           >
-            {pending ? t("auth.settingUp") : t("actions.next")}
+            {pending ? <BusyLabel>{t("auth.settingUp")}</BusyLabel> : t("actions.next")}
           </button>
         </form>
       </div>

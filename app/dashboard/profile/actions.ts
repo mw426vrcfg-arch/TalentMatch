@@ -143,7 +143,7 @@ export async function addHairPortfolioImagesAction(
 
   const remaining = MAX_PORTFOLIO_IMAGES - current.length;
   if (remaining <= 0) {
-    return { error: "Dein Haar-Portfolio ist voll (maximal 6 Bilder)." };
+    return { error: "Dein Haar-Portfolio ist voll (maximal 4 Bilder)." };
   }
 
   const next = [...current];

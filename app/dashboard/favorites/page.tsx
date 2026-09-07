@@ -7,6 +7,7 @@ import { loadCustomerLoyalty } from "@/lib/loyalty/store";
 import { filterOffersForMember } from "@/lib/offers/load-active-offers";
 import { loadFavoriteOffers, loadFollowedSalonCards } from "@/lib/favorites/store";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { EmptyExplore } from "@/components/ui/empty-explore";
 import { PageIntro, T } from "@/components/i18n/t";
 import { LocalizedText } from "@/components/i18n/localized-text";
 
@@ -37,8 +38,8 @@ export default async function FavoritesPage() {
           <T k="favorites.likedOffers" />
         </h2>
         {liked.length === 0 ? (
-          <div className="ui-empty mt-4">
-            <T k="favorites.empty" />
+          <div className="mt-4">
+            <EmptyExplore messageKey="empty.noFavorites" />
           </div>
         ) : (
           <div className="mt-6 grid gap-6 md:grid-cols-2">
@@ -54,8 +55,8 @@ export default async function FavoritesPage() {
           <T k="favorites.followedSalons" />
         </h2>
         {followed.length === 0 ? (
-          <div className="ui-empty mt-4">
-            <T k="favorites.emptyFollowed" />
+          <div className="mt-4">
+            <EmptyExplore messageKey="empty.noFavorites" />
           </div>
         ) : (
           <div className="mt-6 grid gap-4 sm:grid-cols-2">

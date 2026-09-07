@@ -5,7 +5,7 @@ import {
   isImageFile,
   MAX_LOGO_BYTES,
 } from "@/lib/business/images";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, tryCreateAdminClient } from "@/lib/supabase/admin";
 
 export type BeforeAfterPair = {
   id: string;
@@ -84,7 +84,10 @@ export async function savePortfolioPair(
 }
 
 export async function loadSalonBeforeAfter(salonUserId: string): Promise<BeforeAfterPair[]> {
-  const admin = createAdminClient();
+  const admin = tryCreateAdminClient();
+  if (!admin) {
+    return [];
+  }
   const fromTable = await admin
     .from("portfolio_images")
     .select("id, before_url, after_url, created_at")

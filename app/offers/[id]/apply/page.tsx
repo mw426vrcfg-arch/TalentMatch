@@ -8,6 +8,7 @@ import { VipWaitNotice } from "@/components/offers/vip-wait-notice";
 import { T } from "@/components/i18n/t";
 import { LocalizedText } from "@/components/i18n/localized-text";
 import { loadOfferAccess } from "@/lib/loyalty/offer-access";
+import { applyReturnPath } from "@/lib/auth/return-to";
 import { loadOfferSlot } from "@/lib/offers/load-active-offers";
 
 export default async function ApplyPage({
@@ -19,7 +20,7 @@ export default async function ApplyPage({
 }) {
   const { id } = await params;
   const { slot: slotId } = await searchParams;
-  const { profile } = await requireCustomer();
+  const { profile } = await requireCustomer(applyReturnPath(id, slotId));
 
   if (!slotId) {
     notFound();

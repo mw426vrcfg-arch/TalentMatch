@@ -157,7 +157,7 @@ export async function reviewApplicationAction(
         .maybeSingle();
 
       if (slot.is_booked || existingBooking) {
-        return { error: "Dieser Slot ist bereits ausgebucht." };
+        return { error: "Diese Zeit ist bereits ausgebucht." };
       }
     }
 
@@ -223,7 +223,7 @@ export async function reviewApplicationAction(
         userId: application.customer_id,
         type: "application_accepted",
         title: "Der Salon hat dich angenommen",
-        message: "Dein Termin am gewählten Slot wurde bestätigt!",
+        message: "Dein Termin zur gewählten Zeit wurde bestätigt!",
         applicationId: application.id,
         offerId: application.offer_id,
       });

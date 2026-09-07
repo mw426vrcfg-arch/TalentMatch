@@ -8,7 +8,7 @@ import {
 } from "@/lib/customer/images";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export const MAX_PORTFOLIO_IMAGES = 6;
+export const MAX_PORTFOLIO_IMAGES = 4;
 export const PORTFOLIO_FOLDER = "portfolio";
 export const MAX_PORTFOLIO_BYTES = MAX_AVATAR_BYTES;
 

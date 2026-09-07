@@ -5,17 +5,20 @@ import { useLocale, useT } from "@/components/i18n/i18n-provider";
 import { intlLocale } from "@/lib/i18n/config";
 import { formatSlotDay, formatSlotTime, groupSlotsByDay } from "@/lib/offers/format";
 import { type BrowseSlot } from "@/lib/offers/load-active-offers";
+import { applyReturnPath, guestApplyLoginHref } from "@/lib/auth/return-to";
 
 export function SlotChoices({
   offerId,
   slots,
   compact = false,
   canApply = true,
+  signedIn = true,
 }: {
   offerId: string;
   slots: BrowseSlot[];
   compact?: boolean;
   canApply?: boolean;
+  signedIn?: boolean;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -56,7 +59,11 @@ export function SlotChoices({
                   </span>
                 ) : canApply ? (
                   <Link
-                    href={`/offers/${offerId}/apply?slot=${slot.id}`}
+                    href={
+                      signedIn
+                        ? applyReturnPath(offerId, slot.id)
+                        : guestApplyLoginHref(offerId)
+                    }
                     className={
                       compact
                         ? "ui-chip text-xs"

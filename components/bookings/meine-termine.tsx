@@ -20,9 +20,14 @@ import { formatSlotDay, formatSlotTime } from "@/lib/offers/format";
 import { intlLocale } from "@/lib/i18n/config";
 import { type MessageKey } from "@/lib/i18n/messages";
 import { useLocale, useT } from "@/components/i18n/i18n-provider";
+import { ConfirmedBadge } from "@/components/ui/confirmed-badge";
+import { EmptyExplore } from "@/components/ui/empty-explore";
 
 function StatusBadge({ status }: { status: AppointmentOverview["status"] }) {
   const t = useT();
+  if (status === "confirmed") {
+    return <ConfirmedBadge label={t("status.confirmed")} />;
+  }
   const closed = status === "completed" || status === "no_show";
   return (
     <span
@@ -151,18 +156,22 @@ function AppointmentCard({
 function Group({
   title,
   empty,
+  explore,
   children,
   hasItems,
 }: {
   title: string;
   empty: string;
+  explore?: boolean;
   children: ReactNode;
   hasItems: boolean;
 }) {
   return (
     <div>
       <h3 className="font-serif text-2xl text-ink">{title}</h3>
-      <div className="mt-4 space-y-4">{hasItems ? children : <div className="ui-empty">{empty}</div>}</div>
+      <div className="mt-4 space-y-4">
+        {hasItems ? children : explore ? <EmptyExplore messageKey="empty.noAppointments" /> : <div className="ui-empty">{empty}</div>}
+      </div>
     </div>
   );
 }
@@ -272,7 +281,12 @@ export function MeineTermine({
       </div>
 
       <div className="mt-8 grid gap-10 lg:grid-cols-2">
-        <Group title={t("appointments.upcoming")} empty={t("appointments.upcomingEmpty")} hasItems={upcoming.length > 0}>
+        <Group
+          title={t("appointments.upcoming")}
+          empty={t("appointments.upcomingEmpty")}
+          explore={role === "customer"}
+          hasItems={upcoming.length > 0}
+        >
           {upcoming.map((item) => (
               <AppointmentCard
                 key={item.id}

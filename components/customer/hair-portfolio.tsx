@@ -34,7 +34,7 @@ export function HairPortfolioEditor({ images }: { images: string[] }) {
 
       {state.error ? <p className="ui-alert-error mt-4">{localize(state.error)}</p> : null}
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-2 gap-3">
         {images.map((url, index) => (
           <figure
             key={url}

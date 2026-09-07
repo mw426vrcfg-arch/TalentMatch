@@ -71,7 +71,6 @@ export async function savePlatformFeedback(
   });
 
   const primary = await insertFeedbackRow(admin, "feedbacks", row);
-  console.log("4. Supabase-Insert in feedbacks Status:", primary);
   if (primary.ok) {
     return { table: "feedbacks" as const, ok: true, error: null };
   }
@@ -84,7 +83,6 @@ export async function savePlatformFeedback(
       role: row.role,
     });
     const retry = await insertFeedbackRow(admin, "feedbacks", row);
-    console.log("4. Supabase-Insert in feedbacks Retry-Status:", retry);
     if (retry.ok) {
       return { table: "feedbacks" as const, ok: true, error: null };
     }

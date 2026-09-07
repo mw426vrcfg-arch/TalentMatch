@@ -15,6 +15,7 @@ import {
 import { sanitizeUuid } from "@/lib/security/sanitize";
 import { intlLocale } from "@/lib/i18n/config";
 import { useLocale, useLocalize, useT } from "@/components/i18n/i18n-provider";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 function formatWhen(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
@@ -334,8 +335,8 @@ export function AppointmentChat({
             placeholder={t("chat.placeholder")}
             className="ui-input min-h-10 py-2"
           />
-          <button type="submit" disabled={pending || !draft.trim()} className="ui-btn-primary px-4">
-            {pending ? "…" : t("actions.send")}
+          <button type="submit" disabled={pending || !draft.trim()} aria-busy={pending} className="ui-btn-primary px-4">
+            {pending ? <BusyLabel>{t("common.sending")}</BusyLabel> : t("actions.send")}
           </button>
         </form>
       </div>

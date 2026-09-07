@@ -7,7 +7,7 @@ import {
 
 export default function Loading() {
   return (
-    <SkeletonScreen>
+    <SkeletonScreen showTabBar={false}>
       <SkeletonCard className="space-y-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">

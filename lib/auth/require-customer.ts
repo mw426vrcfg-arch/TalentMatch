@@ -1,16 +1,17 @@
 import { redirect } from "next/navigation";
 import { ensureProfile, getProfile, profileFromUser } from "@/lib/auth/ensure-profile";
+import { withReturnTo } from "@/lib/auth/return-to";
 import { createClient } from "@/lib/supabase/server";
 import { getStrikeRestriction } from "@/lib/strikes/restriction";
 
-export async function requireCustomer() {
+export async function requireCustomer(returnTo?: string) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(withReturnTo("/login", returnTo));
   }
 
   let profile;

@@ -110,6 +110,10 @@ export function BrowseSearchBoard({
               : t("browse.hitsMany", { count: ranked.length })
             : t("browse.searchHint")}
         </p>
+        <div className="ui-card mt-5 p-5">
+          <p className="ui-kicker">{t("browse.howTitle")}</p>
+          <p className="mt-2 text-sm leading-relaxed text-ink">{t("browse.howBody")}</p>
+        </div>
       </div>
 
       {ranked.length === 0 ? (
@@ -132,6 +136,7 @@ export function BrowseSearchBoard({
               key={offer.id}
               offer={offer}
               showFavorite={showFavorite}
+              signedIn={showFavorite}
               favorited={favoriteIds.includes(offer.id)}
               perfectMatch={matchIds.includes(offer.id)}
             />

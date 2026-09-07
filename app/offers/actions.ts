@@ -58,14 +58,14 @@ export async function applyToOfferAction(
   const notes = readText(formData, "notes", TEXT_LIMITS.notes);
 
   if (!offerId || !slotId) {
-    return { error: "Angebot oder Slot fehlt." };
+    return { error: "Angebot oder Termin fehlt." };
   }
 
   const offer = await loadOfferById(offerId);
   const slot = await loadAvailableSlot(slotId, offerId);
 
   if (!offer || !slot) {
-    return { error: "Dieser Slot ist ausgebucht oder nicht mehr verfügbar." };
+    return { error: "Diese Zeit ist ausgebucht oder nicht mehr verfügbar." };
   }
 
   const blocked = await loadBlockedSalons(user.id);
@@ -122,7 +122,7 @@ export async function applyToOfferAction(
 
   const stillOpen = await loadAvailableSlot(slotId, offerId);
   if (!stillOpen) {
-    return { error: "Dieser Slot wurde soeben ausgebucht. Bitte wähle eine andere Uhrzeit." };
+    return { error: "Diese Zeit wurde soeben ausgebucht. Bitte wähle eine andere Uhrzeit." };
   }
 
   const { data: created, error: insertError } = await admin

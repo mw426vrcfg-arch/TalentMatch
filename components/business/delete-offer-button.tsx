@@ -7,6 +7,7 @@ import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { isOwnSalonOffer } from "@/lib/offers/ownership";
 import type { SalonOfferListItem } from "@/lib/offers/salon-list";
 import { hapticTap } from "@/lib/ui/haptic";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 function TrashIcon() {
   return (
@@ -94,13 +95,7 @@ export function DeleteOfferButton({
                 });
               }}
             >
-              {pending ? (
-                <svg viewBox="0 0 24 24" className="ui-spin h-4 w-4" fill="none" aria-hidden>
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.28" strokeWidth="2.2" />
-                  <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-                </svg>
-              ) : null}
-              {t("salon.deleteYes")}
+              {pending ? <BusyLabel>{t("common.sending")}</BusyLabel> : t("salon.deleteYes")}
             </button>
           </div>
         </Sheet>

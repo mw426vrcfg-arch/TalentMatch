@@ -1,3 +1,16 @@
+export function savingsPercent(normalPrice: number | string, discountPrice: number | string) {
+  const normal = Number(normalPrice);
+  const discount = Number(discountPrice);
+  if (!Number.isFinite(normal) || !Number.isFinite(discount) || normal <= 0 || discount < 0 || discount >= normal) {
+    return null;
+  }
+  return Math.round(((normal - discount) / normal) * 100);
+}
+
+export function isStrongSaving(percent: number | null, threshold = 30) {
+  return percent != null && percent >= threshold;
+}
+
 export function formatChf(value: number | string, locale = "de-CH") {
   return new Intl.NumberFormat(locale, {
     style: "currency",

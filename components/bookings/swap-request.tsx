@@ -12,6 +12,7 @@ import { useLocale, useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { Skeleton, SkeletonChips } from "@/components/ui/skeleton";
 import { intlLocale } from "@/lib/i18n/config";
 import { formatSlotDay, formatSlotTime } from "@/lib/offers/format";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 const initial: SwapState = {};
 
@@ -97,8 +98,8 @@ export function SwapRequestButton({ applicationId }: { applicationId: string }) 
               </button>
             ))}
           </div>
-          <button type="submit" disabled={pending || !selected} className="ui-btn-primary">
-            {pending ? t("booking.sending") : t("booking.sendRequest")}
+          <button type="submit" disabled={pending || !selected} aria-busy={pending} className="ui-btn-primary">
+            {pending ? <BusyLabel>{t("booking.sending")}</BusyLabel> : t("booking.sendRequest")}
           </button>
         </form>
       )}

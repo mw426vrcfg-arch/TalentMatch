@@ -5,11 +5,12 @@ import { applyOAuthRole } from "@/lib/auth/oauth-profile";
 import { OAUTH_ROLE_COOKIE } from "@/lib/auth/oauth-role";
 import { redirectPathForRole } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { readReturnTo } from "@/lib/auth/return-to";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next");
+  const next = readReturnTo(searchParams);
 
   if (searchParams.get("error")) {
     return NextResponse.redirect(`${origin}/login?error=oauth`);

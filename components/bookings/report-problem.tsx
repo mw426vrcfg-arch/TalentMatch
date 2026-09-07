@@ -7,6 +7,7 @@ import {
   type DisputeFormState,
 } from "@/app/disputes/actions";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 const initialState: DisputeFormState = {};
 
@@ -72,8 +73,8 @@ export function ReportProblemButton({
             }
             className="ui-input resize-y"
           />
-          <button type="submit" disabled={pending} className="ui-btn-secondary px-4 text-xs">
-            {pending ? t("booking.sending") : t("booking.sendReport")}
+          <button type="submit" disabled={pending} aria-busy={pending} className="ui-btn-secondary px-4 text-xs">
+            {pending ? <BusyLabel>{t("booking.sending")}</BusyLabel> : t("booking.sendReport")}
           </button>
         </form>
       ) : null}

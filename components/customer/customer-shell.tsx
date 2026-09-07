@@ -26,7 +26,7 @@ export async function CustomerShell({
   children,
 }: CustomerShellProps) {
   return (
-    <main className="min-h-screen pb-24">
+    <main className={signedIn ? "min-h-screen pb-24" : "min-h-screen"}>
       {signedIn ? <InAppPushHost /> : null}
       <AppHeader>
         <div className="min-w-0">

@@ -10,6 +10,7 @@ import { formatSlotClock, formatSlotDay, groupSlotsByDay } from "@/lib/offers/fo
 import { combineLocalDateTime } from "@/lib/offers/slot-schedule";
 import { type SalonOfferListItem } from "@/lib/offers/salon-list";
 import { hapticTap } from "@/lib/ui/haptic";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 const initialState: OfferFormState = {};
 
@@ -354,16 +355,19 @@ export function CreateOfferForm({
         <button
           type="submit"
           disabled={pending}
+          aria-busy={pending}
           onClick={() => hapticTap(isEdit ? "success" : "light")}
           className="ui-btn-primary w-full sm:w-auto"
         >
-          {pending
-            ? t("create.saving")
-            : isEdit
-              ? t("create.saveChanges")
-              : onCancel
-                ? t("actions.save")
-                : t("actions.publish")}
+          {pending ? (
+            <BusyLabel>{t("create.saving")}</BusyLabel>
+          ) : isEdit ? (
+            t("create.saveChanges")
+          ) : onCancel ? (
+            t("actions.save")
+          ) : (
+            t("actions.publish")
+          )}
         </button>
       </div>
     </form>

@@ -11,6 +11,11 @@ export function partnerSalonLabel(stableId: string) {
   return `Salon #${partnerSalonCode(stableId)}`;
 }
 
+export function partnerInitial(name: string) {
+  const letter = name.replace(/[^A-Za-zÀ-ÿ]/g, "").charAt(0);
+  return letter ? letter.toUpperCase() : "S";
+}
+
 export function regionLabel(city: string | null | undefined) {
   const value = city?.trim();
   if (!value || value === "Standort folgt") {

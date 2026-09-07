@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useT } from "@/components/i18n/i18n-provider";
 import { type MessageKey } from "@/lib/i18n/messages";
 
-const STORAGE_KEY = "tm_onboarding_v1";
+const STORAGE_KEY = "tm_onboarding_v3";
 
 type Slide = {
   kicker: MessageKey;
@@ -103,7 +103,7 @@ export function WelcomeSlider() {
   // Overlay bleibt bis zum Seitenwechsel stehen, sonst blitzt die Startseite auf.
   const start = useCallback(() => {
     remember();
-    router.push("/login");
+    router.push("/offers");
   }, [remember, router]);
 
   useEffect(() => {

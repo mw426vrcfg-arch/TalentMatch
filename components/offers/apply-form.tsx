@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { applyToOfferAction, type ApplyFormState } from "@/app/offers/actions";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 const initialState: ApplyFormState = {};
 
@@ -67,9 +68,10 @@ export function ApplyForm({ offerId, slotId }: ApplyFormProps) {
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending}
         className="ui-btn-primary w-full"
       >
-        {pending ? t("actions.submittingApplication") : t("actions.submitApplication")}
+        {pending ? <BusyLabel>{t("actions.submittingApplication")}</BusyLabel> : t("actions.submitApplication")}
       </button>
     </form>
   );

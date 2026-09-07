@@ -73,7 +73,7 @@ export async function sendFeedbackAction(formData: FormData) {
   ]);
 
   if (dbError) {
-    console.error("=== FEEDBACK ERROR ===", dbError);
+    console.error("Feedback konnte nicht gespeichert werden:", dbError);
     return { success: false, error: dbError.message };
   }
 
@@ -102,16 +102,14 @@ export async function sendFeedbackAction(formData: FormData) {
     const data = (await response.json().catch(() => null)) as { id?: string; message?: string; name?: string } | null;
     if (!response.ok) {
       console.warn("Resend Versand fehlgeschlagen, Feedback nur in Supabase gespeichert");
-      console.error("=== FEEDBACK ERROR ===", formatResendError({ status: response.status, data }));
+      console.error("Resend Versand fehlgeschlagen:", formatResendError({ status: response.status, data }));
       return { success: true };
     }
 
-    console.log("=== FEEDBACK SUCCESS ===");
-    console.log("3. Resend Success ID:", data?.id);
     return { success: true };
   } catch (error) {
     console.warn("Resend Versand fehlgeschlagen, Feedback nur in Supabase gespeichert");
-    console.error("=== FEEDBACK ERROR ===", error);
+    console.error("Resend Versand fehlgeschlagen:", error);
     return { success: true };
   }
 }

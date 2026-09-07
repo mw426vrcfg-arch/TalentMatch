@@ -6,6 +6,7 @@ import {
   type ReviewState,
 } from "@/app/business/review-actions";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
+import { BusyLabel } from "@/components/ui/busy-label";
 
 const initialState: ReviewState = {};
 
@@ -32,8 +33,9 @@ export function ReviewButtons({ applicationId }: { applicationId: string }) {
           value="accepted"
           disabled={pending}
           className="ui-btn-primary"
+          aria-busy={pending}
         >
-          {pending ? t("actions.saving") : t("actions.accept")}
+          {pending ? <BusyLabel>{t("common.sending")}</BusyLabel> : t("actions.accept")}
         </button>
         <button
           type="submit"
@@ -41,8 +43,9 @@ export function ReviewButtons({ applicationId }: { applicationId: string }) {
           value="rejected"
           disabled={pending}
           className="ui-btn-danger"
+          aria-busy={pending}
         >
-          {t("actions.decline")}
+          {pending ? <BusyLabel>{t("common.sending")}</BusyLabel> : t("actions.decline")}
         </button>
       </form>
     </div>

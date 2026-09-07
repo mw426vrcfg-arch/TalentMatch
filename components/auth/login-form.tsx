@@ -5,8 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { loginAction } from "@/app/auth/actions";
 import { type AuthState } from "@/lib/auth/auth-state";
 import { isValidEmail } from "@/lib/auth/credentials";
+import { readReturnTo } from "@/lib/auth/return-to";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
 import { PasswordField } from "@/components/auth/password-field";
+import { BusyLabel } from "@/components/ui/busy-label";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 
 const initialState: AuthState = {};
@@ -18,7 +20,7 @@ export function LoginForm() {
   const t = useT();
   const localize = useLocalize();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "";
+  const next = readReturnTo(searchParams);
   const callbackError = searchParams.get("error");
   const resetDone = searchParams.get("reset") === "1";
   const [forgotOpen, setForgotOpen] = useState(false);
@@ -99,12 +101,12 @@ export function LoginForm() {
 
       <ForgotPasswordDialog open={forgotOpen} onClose={() => setForgotOpen(false)} />
 
-      <button type="submit" disabled={busy} className="ui-btn-primary w-full">
-        {busy ? t("auth.loading") : t("auth.signIn")}
+      <button type="submit" disabled={busy} aria-busy={busy} className="ui-btn-primary w-full">
+        {busy ? <BusyLabel>{t("auth.signingIn")}</BusyLabel> : t("auth.signIn")}
       </button>
 
       {/* Steht am Ende, sonst erzeugt space-y über dem ersten Feld einen leeren Abstand. */}
-      <input type="hidden" name="next" value={next} />
+      <input type="hidden" name="redirectTo" value={next} />
     </form>
   );
 }
