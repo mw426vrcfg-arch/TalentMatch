@@ -21,6 +21,7 @@ export function SalonOfferCard({
   urgentLimitReached = false,
   urgentLimit = 3,
   urgentUsed = 0,
+  missingVenueContact = false,
   onDeleted,
 }: {
   offer: SalonOfferListItem;
@@ -28,6 +29,7 @@ export function SalonOfferCard({
   urgentLimitReached?: boolean;
   urgentLimit?: number;
   urgentUsed?: number;
+  missingVenueContact?: boolean;
   onDeleted?: (offerId: string) => void;
 }) {
   const canEdit = isOwnSalonOffer(offer, currentUserId) && offer.salon_id === currentUserId;
@@ -57,6 +59,7 @@ export function SalonOfferCard({
                 urgentLimitReached={urgentLimitReached}
                 urgentLimit={urgentLimit}
                 urgentUsed={urgentUsed}
+                missingVenueContact={missingVenueContact}
               />
               {onDeleted ? (
                 <DeleteOfferButton offer={offer} currentUserId={currentUserId} onDeleted={onDeleted} />

@@ -80,11 +80,20 @@ export function mapSalonOffer(row: unknown): SalonOfferListItem | null {
 
 export async function loadSalonOffers(businessId: string): Promise<SalonOfferListItem[]> {
   const admin = createAdminClient();
-  const { data, error } = await admin
+  const columns =
+    "id, business_id, title, description, normal_price, discount_price, duration_minutes, status, available_slots, is_urgent, vip_early_access, image_url, wanted_hair_structure, wanted_hair_length, wanted_hair_chemical, offer_slots(id, start_time, is_booked)";
+  const slim = await admin
     .from("offers")
-    .select("*, offer_slots(id, start_time, is_booked)")
+    .select(columns)
     .eq("business_id", businessId)
     .order("created_at", { ascending: false });
+  const { data, error } = slim.error
+    ? await admin
+        .from("offers")
+        .select("id, business_id, title, description, normal_price, discount_price, duration_minutes, status, image_url, offer_slots(id, start_time, is_booked)")
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: false })
+    : slim;
 
   if (error) {
     throw new Error(error.message);

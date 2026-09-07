@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { HairProfileFields } from "@/components/hair/hair-profile-fields";
 import { SmartPricingWidget } from "@/components/business/smart-pricing-widget";
 import { createOfferAction, updateOfferAction, type OfferFormState } from "@/app/business/actions";
@@ -39,12 +40,14 @@ export function CreateOfferForm({
   urgentLimitReached = false,
   urgentLimit = 3,
   urgentUsed = 0,
+  missingVenueContact = false,
 }: {
   onCancel?: () => void;
   offer?: SalonOfferListItem;
   urgentLimitReached?: boolean;
   urgentLimit?: number;
   urgentUsed?: number;
+  missingVenueContact?: boolean;
 }) {
   const t = useT();
   const localize = useLocalize();
@@ -80,6 +83,14 @@ export function CreateOfferForm({
   return (
     <form action={formAction} className="space-y-5">
       {state.error && <p className="ui-alert-error">{localize(state.error)}</p>}
+      {missingVenueContact ? (
+        <p className="rounded-[22px] border border-amber-200/80 bg-amber-50/90 p-4 text-sm leading-relaxed text-amber-950">
+          {t("create.contactHint")}{" "}
+          <Link href="/business/profile" className="font-medium underline underline-offset-2">
+            {t("create.contactHintLink")}
+          </Link>
+        </p>
+      ) : null}
       {offer?.id ? <input type="hidden" name="offer_id" value={offer.id} /> : null}
 
       <label className="block">

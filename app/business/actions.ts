@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidatePublicOffers } from "@/lib/offers/public-cache";
 import { redirect } from "next/navigation";
 import { requireBusiness } from "@/lib/auth/require-business";
 import { loadFollowerUserIds } from "@/lib/favorites/store";
@@ -221,6 +222,7 @@ export async function createOfferAction(
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/favorites");
   revalidatePath("/offers");
+  revalidatePublicOffers();
   redirect("/business/offers?created=1");
 }
 
@@ -431,6 +433,7 @@ export async function updateOfferAction(
   revalidatePath("/dashboard/favorites");
   revalidatePath("/offers");
   revalidatePath(`/offers/${offerId}`);
+  revalidatePublicOffers();
   redirect("/business/offers?updated=1");
 }
 
@@ -495,6 +498,7 @@ export async function deleteOfferAction(offerId: string): Promise<DeleteOfferSta
   revalidatePath("/dashboard/favorites");
   revalidatePath("/offers");
   revalidatePath(`/offers/${id}`);
+  revalidatePublicOffers();
 
   return {};
 }

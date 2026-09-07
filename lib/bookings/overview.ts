@@ -4,6 +4,7 @@ import { mapBusinessRow } from "@/lib/business/profile-store";
 import { resolveAvatarUrl } from "@/lib/customer/images";
 import { loadCustomerProfile } from "@/lib/customer/profile-store";
 import { APPLICATION_STATUS_LABEL } from "@/lib/applications/status";
+import { isSalonContactRevealed, regionLabel } from "@/lib/offers/anonymize";
 import { createAdminClient, tryCreateAdminClient } from "@/lib/supabase/admin";
 
 export type AppointmentStatus = "confirmed" | "completed" | "no_show" | "accepted" | "swap_requested";
@@ -25,6 +26,7 @@ export type AppointmentOverview = {
   counterpart_user_id: string | null;
   requested_slot_id: string | null;
   requested_start_time: string | null;
+  contact_revealed?: boolean;
   active_strikes?: number;
 };
 
@@ -112,16 +114,40 @@ async function loadSlotsByIds(admin: Admin, slotIds: string[]) {
   return new Map((data ?? []).map((slot) => [slot.id as string, slot.start_time as string]));
 }
 
+const BUSINESS_OVERVIEW_SELECT = "id, user_id, business_name, location, address, phone, logo_url";
+
+async function loadBusinessProfileRows(admin: Admin, ids: string[], column: "id" | "user_id") {
+  if (ids.length === 0) {
+    return [] as unknown[];
+  }
+  const slim = await admin.from("business_profiles").select(BUSINESS_OVERVIEW_SELECT).in(column, ids);
+  if (!slim.error && slim.data) {
+    return slim.data;
+  }
+  const full = await admin.from("business_profiles").select("id, user_id, business_name, location, address, phone, logo_url, profile_picture_url").in(column, ids);
+  if (!full.error && full.data) {
+    return full.data;
+  }
+  const fallback = await admin.from("business_profiles").select("*").in(column, ids);
+  return fallback.data ?? [];
+}
+
 function formatVenue(address: string | null | undefined, city: string | null | undefined) {
   return [address?.trim(), city?.trim()].filter(Boolean).join(", ") || null;
 }
 
 async function loadSalonVenue(admin: Admin, businessId: string) {
-  const byId = await admin.from("business_profiles").select("*").eq("id", businessId).maybeSingle();
+  const byId = await admin.from("business_profiles").select(BUSINESS_OVERVIEW_SELECT).eq("id", businessId).maybeSingle();
   const mapped =
     mapBusinessRow(byId.data) ??
     mapBusinessRow(
-      (await admin.from("business_profiles").select("*").eq("user_id", businessId).maybeSingle()).data,
+      (
+        await admin
+          .from("business_profiles")
+          .select(BUSINESS_OVERVIEW_SELECT)
+          .eq("user_id", businessId)
+          .maybeSingle()
+      ).data,
     );
   if (!mapped) {
     return { name: "Salon", location: null as string | null };
@@ -246,6 +272,7 @@ export async function loadSalonAppointments(businessId: string): Promise<Appoint
       counterpart_user_id: customerId,
       requested_slot_id: requestedSlotId,
       requested_start_time: requestedSlotId ? slotMap.get(requestedSlotId) ?? null : null,
+      contact_revealed: true,
       active_strikes: strikeCounts.get(customerId) ?? 0,
     };
   });
@@ -293,14 +320,8 @@ export async function loadCustomerAppointments(customerId: string): Promise<Appo
 
   const profileRows: unknown[] = [];
   if (businessIds.length > 0) {
-    const byId = await admin.from("business_profiles").select("*").in("id", businessIds);
-    if (!byId.error && byId.data) {
-      profileRows.push(...byId.data);
-    }
-    const byUser = await admin.from("business_profiles").select("*").in("user_id", businessIds);
-    if (!byUser.error && byUser.data) {
-      profileRows.push(...byUser.data);
-    }
+    profileRows.push(...(await loadBusinessProfileRows(admin, businessIds, "id")));
+    profileRows.push(...(await loadBusinessProfileRows(admin, businessIds, "user_id")));
   }
 
   const profileById = new Map<string, ReturnType<typeof mapBusinessRow>>();
@@ -355,6 +376,7 @@ export async function loadCustomerAppointments(customerId: string): Promise<Appo
       (profile ? salonUserByProfileId.get(profile.id) : null) ??
       (offer?.business_id && profileByUser.has(offer.business_id) ? offer.business_id : null) ??
       null;
+    const contactRevealed = isSalonContactRevealed(booking?.booking_status);
 
     return {
       id: booking?.id ?? (application.id as string),
@@ -367,14 +389,19 @@ export async function loadCustomerAppointments(customerId: string): Promise<Appo
         requestedSlotId ? "swap_requested" : booking?.booking_status ?? "accepted",
       ),
       counterpart_name: profile?.business_name?.trim() || "Salon",
-      counterpart_phone: profile?.phone ?? null,
+      counterpart_phone: contactRevealed ? profile?.phone ?? null : null,
       counterpart_email: null,
       counterpart_logo_url: resolveLogoUrl(profile?.logo_url),
-      counterpart_address: profile?.address ?? null,
-      event_location: formatVenue(profile?.address, profile?.location),
+      counterpart_address: contactRevealed ? profile?.address ?? null : null,
+      event_location: contactRevealed
+        ? formatVenue(profile?.address, profile?.location)
+        : profile?.location
+          ? regionLabel(profile.location)
+          : null,
       counterpart_user_id: salonUserId,
       requested_slot_id: requestedSlotId,
       requested_start_time: requestedSlotId ? slotMap.get(requestedSlotId) ?? null : null,
+      contact_revealed: contactRevealed,
     };
   });
 }

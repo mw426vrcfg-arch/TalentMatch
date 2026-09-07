@@ -4,6 +4,7 @@ import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { T } from "@/components/i18n/t";
 import { InAppPushHost } from "@/components/notifications/in-app-push-host";
 import { NotificationBellHost } from "@/components/notifications/notification-bell-host";
+import { AppImage } from "@/components/ui/app-image";
 import { loadSalonPendingApplications } from "@/lib/applications/queries";
 import { requireBusiness } from "@/lib/auth/require-business";
 
@@ -24,11 +25,9 @@ export async function SalonShell({ salonName, location, logoUrl, headerAction, c
       <AppHeader>
         <div className="flex min-w-0 items-center gap-3">
           {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt=""
-              className="app-header-logo h-9 w-9 rounded-full object-cover ring-1 ring-zinc-200 transition-[width,height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
-            />
+            <div className="app-header-logo relative h-9 w-9 overflow-hidden rounded-full ring-1 ring-zinc-200 transition-[width,height] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]">
+              <AppImage src={logoUrl} fill sizes="36px" className="object-cover" />
+            </div>
           ) : null}
           <div className="min-w-0">
             <p className="app-header-brand font-serif text-xl tracking-tight text-ink transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]">

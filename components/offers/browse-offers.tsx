@@ -5,7 +5,8 @@ import { isPerfectHairMatch } from "@/lib/hair/criteria";
 import { loadCustomerProfile } from "@/lib/customer/profile-store";
 import { filterBlockedOffers, loadBlockedSalons, NO_BLOCKED_SALONS } from "@/lib/blacklist/store";
 import { loadCustomerLoyalty } from "@/lib/loyalty/store";
-import { filterOffersForMember, loadActiveOffers, type BrowseOffer } from "@/lib/offers/load-active-offers";
+import { filterOffersForMember, type BrowseOffer } from "@/lib/offers/load-active-offers";
+import { loadActiveOffersCached } from "@/lib/offers/public-cache";
 import { scheduleOfferExpiry } from "@/lib/offers/expire";
 import { tryCreateAdminClient } from "@/lib/supabase/admin";
 
@@ -21,7 +22,7 @@ export async function BrowseOffers({
   scheduleOfferExpiry();
   let allOffers: BrowseOffer[] = [];
   try {
-    allOffers = await loadActiveOffers();
+    allOffers = await loadActiveOffersCached();
   } catch (error) {
     console.error("Active offers load failed:", error instanceof Error ? error.message : error);
   }

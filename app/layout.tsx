@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { Analytics } from "@vercel/analytics/react";
 import { Cormorant_Garamond, Plus_Jakarta_Sans } from "next/font/google";
+import { AnalyticsProvider } from "@/components/analytics/analytics-provider";
 import { I18nProvider } from "@/components/i18n/i18n-provider";
-import { LOCALE_COOKIE, htmlLang, parseLocale } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, htmlLang } from "@/lib/i18n/config";
 import { translate } from "@/lib/i18n/messages";
 import "./globals.css";
 
@@ -17,27 +18,26 @@ const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
 });
 
-export async function generateMetadata(): Promise<Metadata> {
-  const cookieStore = await cookies();
-  const locale = parseLocale(cookieStore.get(LOCALE_COOKIE)?.value);
-  return {
-    title: "TalentMatch",
-    description: translate(locale, "home.metaDescription"),
-  };
-}
+export const metadata: Metadata = {
+  title: "TalentMatch",
+  description: translate(DEFAULT_LOCALE, "home.metaDescription"),
+};
 
-export default async function RootLayout({
+const localeBootstrap = `try{var v=localStorage.getItem(${JSON.stringify(LOCALE_STORAGE_KEY)});if(v==="en"||v==="fr"||v==="de")document.documentElement.lang=v;}catch(e){}`;
+
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const locale = parseLocale(cookieStore.get(LOCALE_COOKIE)?.value);
-
   return (
-    <html lang={htmlLang(locale)} suppressHydrationWarning>
+    <html lang={htmlLang(DEFAULT_LOCALE)} suppressHydrationWarning>
       <body className={`${plusJakarta.variable} ${cormorant.variable} min-h-screen font-sans text-ink antialiased`}>
-        <I18nProvider initialLocale={locale}>{children}</I18nProvider>
+        <script dangerouslySetInnerHTML={{ __html: localeBootstrap }} />
+        <AnalyticsProvider>
+          <I18nProvider>{children}</I18nProvider>
+        </AnalyticsProvider>
+        <Analytics />
       </body>
     </html>
   );

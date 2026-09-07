@@ -28,6 +28,8 @@ import { applyReturnPath, guestApplyLoginHref } from "@/lib/auth/return-to";
 import { offerServiceTag } from "@/lib/offers/service-type";
 import { partnerInitial } from "@/lib/offers/anonymize";
 
+export const revalidate = 60;
+
 export default async function OfferDetailPage({
   params,
 }: {
@@ -119,6 +121,7 @@ export default async function OfferDetailPage({
             <CoverImage
               src={offer.image_url}
               className="mt-6 aspect-[4/3] w-full rounded-[22px] object-cover"
+              sizes="(max-width: 1024px) 100vw, 720px"
             />
           ) : (
             <div className="mt-6 flex aspect-[4/3] items-end rounded-[22px] bg-gradient-to-br from-zinc-200 via-white to-zinc-100 p-5">

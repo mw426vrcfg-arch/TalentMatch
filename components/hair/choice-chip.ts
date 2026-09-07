@@ -1,5 +1,3 @@
-"use client";
-
 export const CHIP_BASE =
   "inline-flex cursor-pointer select-none items-center rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-300 ease-out hover:scale-[1.015] active:scale-95";
 

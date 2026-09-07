@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { parseSlotIdFromNotes } from "@/lib/applications/slot-from-notes";
 import { requireBusiness } from "@/lib/auth/require-business";
+import { revalidatePublicOffers } from "@/lib/offers/public-cache";
 import { createNotification } from "@/lib/notifications/create";
 import { refreshOfferAvailability } from "@/lib/offers/availability";
 import { formatAppointmentWhen } from "@/lib/offers/format";
@@ -236,5 +237,6 @@ export async function reviewApplicationAction(
   revalidatePath("/dashboard");
   revalidatePath("/offers");
   revalidatePath(`/offers/${application.offer_id}`);
+  revalidatePublicOffers();
   return {};
 }

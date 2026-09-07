@@ -26,12 +26,14 @@ export function EditOfferButton({
   urgentLimitReached = false,
   urgentLimit = 3,
   urgentUsed = 0,
+  missingVenueContact = false,
 }: {
   offer: SalonOfferListItem;
   currentUserId: string;
   urgentLimitReached?: boolean;
   urgentLimit?: number;
   urgentUsed?: number;
+  missingVenueContact?: boolean;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -66,6 +68,7 @@ export function EditOfferButton({
             urgentLimitReached={urgentLimitReached}
             urgentLimit={urgentLimit}
             urgentUsed={urgentUsed}
+            missingVenueContact={missingVenueContact}
           />
         </OfferEditorOverlay>
       ) : null}

@@ -39,7 +39,9 @@ export function BrowseSearchBoard({
   const filtering = searching || urgentOnly;
 
   useEffect(() => {
-    setQuery(initialQuery);
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = (params.get("q") || params.get("stadt") || initialQuery).trim();
+    setQuery(fromUrl);
   }, [initialQuery]);
 
   useEffect(() => {

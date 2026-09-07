@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { ensureProfile, getProfile, profileFromUser } from "@/lib/auth/ensure-profile";
 import { withReturnTo } from "@/lib/auth/return-to";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, hasSupabaseSessionCookie } from "@/lib/supabase/server";
 import { getStrikeRestriction } from "@/lib/strikes/restriction";
 
 export async function requireCustomer(returnTo?: string) {
@@ -39,6 +39,10 @@ export async function requireCustomer(returnTo?: string) {
 }
 
 export async function getOptionalProfile() {
+  if (!(await hasSupabaseSessionCookie())) {
+    return null;
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

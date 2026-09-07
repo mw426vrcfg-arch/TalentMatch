@@ -21,19 +21,40 @@ const securityHeaders = [
   },
 ];
 
-function supabaseImageHost() {
+function supabaseImagePatterns() {
   const raw = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const patterns: NonNullable<NextConfig["images"]>["remotePatterns"] = [
+    {
+      protocol: "https",
+      hostname: "*.supabase.co",
+      pathname: "/storage/v1/object/public/**",
+    },
+    {
+      protocol: "https",
+      hostname: "*.supabase.co",
+      pathname: "/storage/v1/object/sign/**",
+    },
+  ];
   if (!raw) {
-    return null;
+    return patterns;
   }
   try {
-    return new URL(raw).hostname;
+    const url = new URL(raw);
+    const protocol = url.protocol === "http:" ? "http" : "https";
+    const port = url.port || undefined;
+    for (const pathname of ["/storage/v1/object/public/**", "/storage/v1/object/sign/**"] as const) {
+      patterns.unshift({
+        protocol,
+        hostname: url.hostname,
+        ...(port ? { port } : {}),
+        pathname,
+      });
+    }
   } catch {
-    return null;
+    // NEXT_PUBLIC_SUPABASE_URL ist optional für den Image-Loader.
   }
+  return patterns;
 }
-
-const supabaseHost = supabaseImageHost();
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -44,22 +65,9 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    remotePatterns: [
-      ...(supabaseHost
-        ? [
-            {
-              protocol: "https" as const,
-              hostname: supabaseHost,
-              pathname: "/storage/v1/object/public/**",
-            },
-          ]
-        : []),
-      {
-        protocol: "https",
-        hostname: "*.supabase.co",
-        pathname: "/storage/v1/object/public/**",
-      },
-    ],
+    minimumCacheTTL: 60 * 60 * 24,
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: supabaseImagePatterns(),
   },
   experimental: {
     serverActions: {

@@ -1,7 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { partnerSalonLabel, regionLabel } from "@/lib/offers/anonymize";
-import { loadOffersByIds, type BrowseOffer } from "@/lib/offers/load-active-offers";
+import { loadOffersByIdsCached } from "@/lib/offers/public-cache";
+import { type BrowseOffer } from "@/lib/offers/load-active-offers";
 
 type FavoritesDb = ReturnType<typeof createAdminClient>;
 
@@ -69,7 +70,7 @@ async function loadFavoriteRows(userId: string) {
 
 export async function loadFavoriteOffers(userId: string): Promise<BrowseOffer[]> {
   const rows = await loadFavoriteRows(userId);
-  const offers = await loadOffersByIds(rows.map((row) => row.offer_id));
+  const offers = await loadOffersByIdsCached(rows.map((row) => row.offer_id));
   return offers;
 }
 

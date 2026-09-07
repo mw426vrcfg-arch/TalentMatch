@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { useT } from "@/components/i18n/i18n-provider";
 import { type MessageKey } from "@/lib/i18n/messages";

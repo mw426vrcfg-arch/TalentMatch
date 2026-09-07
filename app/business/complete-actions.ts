@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBusiness } from "@/lib/auth/require-business";
+import { revalidatePublicOffers } from "@/lib/offers/public-cache";
 import { awardCompletedVisitPoints } from "@/lib/loyalty/store";
 import { createNotification } from "@/lib/notifications/create";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -16,7 +17,7 @@ export async function completeBookingAction(
   _prev: CompleteBookingState,
   formData: FormData,
 ): Promise<CompleteBookingState> {
-  const { business } = await requireBusiness();
+  const { user, business } = await requireBusiness();
   if (!business) {
     return { error: "Kein Salonprofil gefunden." };
   }
@@ -81,7 +82,19 @@ export async function completeBookingAction(
     offerId: application.offer_id as string,
   });
 
+  await createNotification(admin, {
+    userId: user.id,
+    type: "booking_confirmed",
+    title: "Bitte bewerten",
+    message: `Bitte bewerte den Kunden nach dem Termin „${offer.title}“ (1–5 Sterne).`,
+    applicationId: application.id as string,
+    offerId: application.offer_id as string,
+  });
+
   revalidatePath("/business/dashboard");
+  revalidatePath("/business/applications");
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/applications");
+  revalidatePublicOffers();
   redirect("/business/dashboard?completed=1");
 }

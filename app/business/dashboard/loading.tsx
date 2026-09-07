@@ -1,9 +1,9 @@
 import {
   Skeleton,
   SkeletonList,
-  SkeletonScreen,
   SkeletonStatGrid,
 } from "@/components/ui/skeleton";
+import { SkeletonScreen } from "@/components/ui/skeleton-screen";
 
 export default function Loading() {
   return (

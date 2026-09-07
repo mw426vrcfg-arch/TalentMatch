@@ -243,13 +243,16 @@ async function loadCompletedParties(filter: {
         return null;
       }
 
+      const salonUserId = String(business.user_id || business.id || "");
+      const businessId = String(business.id || "");
+
       const party: BookingParty = {
         booking_id: booking.id as string,
         booking_status: booking.booking_status as string,
         application_id: application.id as string,
         slot_id: booking.slot_id as string,
         customer_id: application.customer_id as string,
-        salon_user_id: business.user_id as string,
+        salon_user_id: salonUserId,
         offer_title: (offer.title as string) || "Angebot",
         start_time: slotMap.get(booking.slot_id as string) ?? new Date().toISOString(),
         customer_name: userMap.get(application.customer_id as string) || "Kunde",
@@ -259,7 +262,11 @@ async function loadCompletedParties(filter: {
       if (filter.customerId && party.customer_id !== filter.customerId) {
         return null;
       }
-      if (filter.salonUserId && party.salon_user_id !== filter.salonUserId) {
+      if (
+        filter.salonUserId &&
+        party.salon_user_id !== filter.salonUserId &&
+        businessId !== filter.salonUserId
+      ) {
         return null;
       }
       return party;

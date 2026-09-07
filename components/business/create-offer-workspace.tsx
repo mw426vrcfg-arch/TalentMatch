@@ -11,11 +11,13 @@ export function CreateOfferWorkspace({
   urgentLimitReached = false,
   urgentLimit = 3,
   urgentUsed = 0,
+  missingVenueContact = false,
 }: {
   location?: string | null;
   urgentLimitReached?: boolean;
   urgentLimit?: number;
   urgentUsed?: number;
+  missingVenueContact?: boolean;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -47,6 +49,7 @@ export function CreateOfferWorkspace({
             urgentLimitReached={urgentLimitReached}
             urgentLimit={urgentLimit}
             urgentUsed={urgentUsed}
+            missingVenueContact={missingVenueContact}
           />
         </OfferEditorOverlay>
       ) : null}

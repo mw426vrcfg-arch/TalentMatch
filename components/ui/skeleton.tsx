@@ -1,8 +1,3 @@
-"use client";
-
-import { AppHeader } from "@/components/app/app-header";
-import { useT } from "@/components/i18n/i18n-provider";
-
 const BLOCK = "animate-pulse bg-neutral-200/50";
 
 export function Skeleton({ className = "" }: { className?: string }) {
@@ -42,54 +37,6 @@ export function SkeletonCard({
     >
       {children}
     </div>
-  );
-}
-
-/**
- * Rahmen für Route-Skeletons: gleiche Kopfzeile, gleicher Inhaltsbereich und
- * gleiche Tab-Leiste wie die echten Shells, damit beim Wechsel nichts springt.
- */
-export function SkeletonScreen({
-  tabs = 4,
-  showTabBar = true,
-  children,
-}: {
-  tabs?: number;
-  showTabBar?: boolean;
-  children: React.ReactNode;
-}) {
-  const t = useT();
-  return (
-    <main className={showTabBar ? "min-h-screen pb-24" : "min-h-screen"} role="status" aria-label={t("common.loadingContent")}>
-      <AppHeader>
-        <div className="min-w-0">
-          <p className="app-header-brand font-serif text-xl tracking-tight text-ink">TalentMatch</p>
-          <Skeleton className="mt-1.5 h-2.5 w-20 rounded-full" />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Skeleton className="h-9 w-9 rounded-full" />
-          <Skeleton className="h-9 w-24 rounded-full" />
-        </div>
-      </AppHeader>
-
-      <div className="app-screen mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">{children}</div>
-
-      {showTabBar ? (
-      <nav
-        aria-hidden
-        className="ui-tabbar pb-[env(safe-area-inset-bottom)]"
-      >
-        <ul className="mx-auto grid max-w-lg grid-flow-col auto-cols-fr px-2 pt-1">
-          {Array.from({ length: tabs }).map((_, index) => (
-            <li key={index} className="flex flex-col items-center gap-1 px-1 py-2">
-              <Skeleton className="h-5 w-5 rounded-lg" />
-              <Skeleton className="h-2 w-10 rounded-full" />
-            </li>
-          ))}
-        </ul>
-      </nav>
-      ) : null}
-    </main>
   );
 }
 
@@ -231,11 +178,10 @@ export function SkeletonStatGrid({ count = 3 }: { count?: number }) {
 
 /** Chatblasen im Wechsel links/rechts, passend zu AppointmentChat. */
 export function SkeletonChat({ bubbles = 4 }: { bubbles?: number }) {
-  const t = useT();
   const widths = ["w-40", "w-56", "w-32", "w-48", "w-44"];
 
   return (
-    <div className="space-y-2" role="status" aria-label={t("common.loadingChat")}>
+    <div className="space-y-2" role="status" aria-busy="true">
       {Array.from({ length: bubbles }).map((_, index) => {
         const mine = index % 2 === 1;
         return (
@@ -250,11 +196,10 @@ export function SkeletonChat({ bubbles = 4 }: { bubbles?: number }) {
 
 /** Auswahl-Chips, z. B. freie Slots einer Verschiebungsanfrage. */
 export function SkeletonChips({ count = 4 }: { count?: number }) {
-  const t = useT();
   const widths = ["w-32", "w-28", "w-36", "w-24"];
 
   return (
-    <div className="flex flex-wrap gap-2" role="status" aria-label={t("common.loadingSlots")}>
+    <div className="flex flex-wrap gap-2" role="status" aria-busy="true">
       {Array.from({ length: count }).map((_, index) => (
         <Skeleton key={index} className={`h-8 rounded-full ${widths[index % widths.length]}`} />
       ))}

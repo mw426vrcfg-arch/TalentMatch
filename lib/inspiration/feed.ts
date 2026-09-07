@@ -1,10 +1,11 @@
 import { filterBlockedOffers, loadBlockedSalons, NO_BLOCKED_SALONS } from "@/lib/blacklist/store";
 import { resolveBusinessImageUrl } from "@/lib/business/images";
 import { partnerSalonLabel, regionLabel } from "@/lib/offers/anonymize";
-import { loadActiveOffers, type BrowseOffer } from "@/lib/offers/load-active-offers";
+import { loadActiveOffersCached } from "@/lib/offers/public-cache";
 import { isUrgentFlag } from "@/lib/offers/urgent-flag";
 import { scheduleOfferExpiry } from "@/lib/offers/expire";
 import type { InspirationTile } from "@/lib/inspiration/types";
+import { type BrowseOffer } from "@/lib/offers/load-active-offers";
 import { tryCreateAdminClient } from "@/lib/supabase/admin";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -21,7 +22,7 @@ export async function loadInspirationFeed(customerId?: string | null): Promise<I
     return [];
   }
   const blocked = customerId ? await loadBlockedSalons(customerId) : NO_BLOCKED_SALONS;
-  const offers = filterBlockedOffers(await loadActiveOffers(), blocked);
+  const offers = filterBlockedOffers(await loadActiveOffersCached(), blocked);
   const offerBySalon = new Map<string, BrowseOffer>();
   for (const offer of offers) {
     if (!offer.salon_user_id) {

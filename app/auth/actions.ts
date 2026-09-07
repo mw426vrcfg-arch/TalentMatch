@@ -219,7 +219,10 @@ export async function registerAction(
     };
   }
 
-  redirect(role === "customer" && next ? next : redirectPathForRole(role));
+  return {
+    success: "Konto erstellt.",
+    redirectTo: role === "customer" && next ? next : redirectPathForRole(role),
+  };
 }
 
 export async function signOutAction() {

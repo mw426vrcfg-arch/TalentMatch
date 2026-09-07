@@ -94,13 +94,11 @@ export default async function BusinessDashboardPage({
         </p>
       ) : null}
 
+      <RatingWindow items={pendingRatings} role="business" />
+
       <div className="rounded-[22px] border border-white/20 bg-white/60 p-3 shadow-[0_12px_32px_rgba(15,15,20,0.05)] backdrop-blur-xl sm:p-3.5">
         <SalonQuickActionsHub stats={quickActions} compact />
         <SalonAnalyticsBoard stats={analytics} compact />
-      </div>
-
-      <div className="mt-4">
-        <RatingWindow items={pendingRatings} role="business" />
       </div>
 
       <div className="mt-5">

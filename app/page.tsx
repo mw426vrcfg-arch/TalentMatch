@@ -5,6 +5,9 @@ import { T } from "@/components/i18n/t";
 import { WelcomeSlider } from "@/components/onboarding/welcome-slider";
 import { SiteFooter } from "@/components/site-footer";
 
+export const revalidate = 60;
+export const dynamic = "force-static";
+
 export default function HomePage() {
   return (
     <main className="relative">

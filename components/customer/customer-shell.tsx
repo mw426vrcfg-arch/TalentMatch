@@ -17,7 +17,7 @@ type CustomerShellProps = {
   children: ReactNode;
 };
 
-export async function CustomerShell({
+export function CustomerShell({
   title,
   titleKey = "nav.discover",
   userName,

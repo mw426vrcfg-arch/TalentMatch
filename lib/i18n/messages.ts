@@ -5,7 +5,7 @@ export const de = {
     app: "App",
     home: "Home",
     favorites: "Favoriten",
-    applications: "Meine angefragten Termine",
+    applications: "Meine Termine",
     profile: "Profil",
     dashboard: "Dashboard",
     offers: "Angebot",
@@ -40,7 +40,7 @@ export const de = {
     helpIntro: "Kurz und klar — so funktioniert der TalentMatch-Marktplatz.",
     helpRulesTitle: "Marktplatz-Regeln",
     helpRulesBody:
-      "Salons veröffentlichen Vorteilsangebote zu reduzierten Preisen. Du bewirbst dich mit Haarfotos, nicht mit einer verbindlichen Buchung. Der Salon entscheidet. Nach der Zusage sind Termin, Name und Adresse sichtbar. Erscheine pünktlich — Absagen kurz vor dem Termin belasten beide Seiten.",
+      "Salons veröffentlichen Vorteilsangebote zu reduzierten Preisen. Du bewirbst dich mit Haarfotos, nicht mit einer verbindlichen Buchung. Der Salon entscheidet. Nach der verbindlichen Terminbestätigung siehst du Name, Adresse und Telefon. Erscheine pünktlich — Absagen kurz vor dem Termin belasten beide Seiten.",
     helpStrikesTitle: "Strikes & No-Shows",
     helpStrikesBody:
       "Wer unentschuldigt fehlt oder sehr kurzfristig absagt, erhält einen Strike. Drei aktive Strikes sperren das Kundenkonto. Strikes verjähren nach sechs Monaten. So bleiben Termine zuverlässig — für Modelle und Salons.",
@@ -64,7 +64,7 @@ export const de = {
     salonHelpIntro: "Kurz und klar — so steuerst du Buchungen, No-Shows und Gebühren auf TalentMatch.",
     salonHelpBookingsTitle: "Buchungs-Regeln",
     salonHelpBookingsBody:
-      "Kunden bewerben sich mit Haarfotos, nicht mit einer verbindlichen Direktbuchung. Du entscheidest über jede Bewerbung. Nach der Zusage entstehen verbindliche Termine mit Name, Adresse und Uhrzeit. Schließe abgeschlossene Besuche ab, damit beide Seiten bewerten können.",
+      "Kunden bewerben sich mit Haarfotos, nicht mit einer verbindlichen Direktbuchung. Du entscheidest über jede Bewerbung. Nach der verbindlichen Bestätigung sieht der Kunde Name, Adresse, Telefon und Uhrzeit. Schließe abgeschlossene Besuche ab, damit beide Seiten bewerten können.",
     salonHelpNoshowTitle: "No-Show-Meldungen",
     salonHelpNoshowBody:
       "Erscheint jemand unentschuldigt nicht, meldest du ein Fernbleiben. Die Person erhält einen Strike. Drei aktive Strikes sperren das Kundenkonto. So bleiben deine freien Termine zuverlässig belegt.",
@@ -198,7 +198,7 @@ export const de = {
   appointments: {
     kicker: "Kalender",
     title: "Meine Termine",
-    introCustomer: "Bei anstehenden Terminen siehst du den echten Salon mit Name, Telefon und Logo.",
+    introCustomer: "Nach der verbindlichen Bestätigung siehst du den echten Salon mit Name, Adresse, Telefon und Logo.",
     introSalon:
       "Bestätigte Termine kannst du als iCal-Datei in Apple Calendar oder Google Calendar importieren.",
     upcoming: "Anstehende Termine",
@@ -214,7 +214,7 @@ export const de = {
   },
   applications: {
     kicker: "Deine Termine",
-    title: "Meine angefragten Termine",
+    title: "Meine Termine",
     intro: "Hier siehst du, ob der Salon deine Anfrage noch prüft, bestätigt oder abgelehnt hat.",
     empty: "Noch keine Anfrage. Wähle ein Angebot und frage einen freien Termin an.",
     sentTitle: "Deine Anfrage wurde übermittelt!",
@@ -597,6 +597,9 @@ export const de = {
     titlePlaceholder: "Balayage Training Model",
     descriptionPlaceholder: "Balayage durch Junior Stylist unter Supervision.",
     ctaCreate: "+ Neues Angebot erstellen",
+    contactHint:
+      "Bitte hinterlege Adresse und Telefonnummer, damit dein Kunde nach der Buchung weiß, wo der Termin stattfindet.",
+    contactHintLink: "Zum Salonprofil",
   },
   salon: {
     yourDeals: "Deine Angebote",
@@ -869,7 +872,7 @@ export const de = {
         "Auskunft, Berichtigung, Löschung, Einschränkung und Widerspruch nach geltendem Datenschutzrecht. Anfragen an carlo.raghias@bluewin.ch.",
       s8: "8. Cookies und Analyse",
       s8p1:
-        "Wir setzen nur technisch notwendige Session-Cookies ein, insbesondere für Login und Sitzungssicherheit. Es werden keine Analyse-, Werbe- oder Tracking-Cookies verwendet.",
+        "Wir setzen technisch notwendige Session-Cookies für Login und Sitzungssicherheit ein. Zur Produktanalyse nutzen wir Vercel Analytics und PostHog (Nutzungsereignisse, keine Werbung). PostHog kann dazu Analyse-Cookies setzen; die Übertragung erfolgt an Vercel bzw. PostHog in der EU/EWR, soweit konfiguriert.",
     },
   },
   errors: {
@@ -1010,7 +1013,7 @@ export const en: Messages = {
     app: "App",
     home: "Home",
     favorites: "Favorites",
-    applications: "My requested appointments",
+    applications: "My appointments",
     profile: "Profile",
     dashboard: "Dashboard",
     offers: "Offer",
@@ -1045,7 +1048,7 @@ export const en: Messages = {
     helpIntro: "Short and clear — how the TalentMatch marketplace works.",
     helpRulesTitle: "Marketplace rules",
     helpRulesBody:
-      "Salons publish preferential offers at reduced prices. You apply with hair photos, not a binding booking. The salon decides. After acceptance, the appointment, name and address become visible. Please arrive on time — late cancellations cost both sides.",
+      "Salons publish preferential offers at reduced prices. You apply with hair photos, not a binding booking. The salon decides. After the salon confirms the appointment, you see name, address and phone. Please arrive on time — late cancellations cost both sides.",
     helpStrikesTitle: "Strikes & no-shows",
     helpStrikesBody:
       "Missing a visit without notice or cancelling at very short notice adds a strike. Three active strikes lock the client account. Strikes expire after six months. That keeps appointments reliable — for models and salons.",
@@ -1069,7 +1072,7 @@ export const en: Messages = {
     salonHelpIntro: "Short and clear — how bookings, no-shows and fees work on TalentMatch.",
     salonHelpBookingsTitle: "Booking rules",
     salonHelpBookingsBody:
-      "Clients apply with hair photos, not a binding direct booking. You decide on each application. After acceptance, the visit becomes confirmed with name, address and time. Complete finished visits so both sides can rate.",
+      "Clients apply with hair photos, not a binding direct booking. You decide on each application. After you confirm the appointment, the client sees name, address, phone and time. Complete finished visits so both sides can rate.",
     salonHelpNoshowTitle: "No-show reports",
     salonHelpNoshowBody:
       "If someone misses the visit without notice, you report an absence. That person receives a strike. Three active strikes lock the client account. That keeps your open appointments reliably filled.",
@@ -1202,7 +1205,7 @@ export const en: Messages = {
   appointments: {
     kicker: "Calendar",
     title: "My appointments",
-    introCustomer: "For upcoming visits you see the real salon with name, phone and logo.",
+    introCustomer: "After the salon confirms the appointment, you see the real salon with name, address, phone and logo.",
     introSalon: "Confirmed appointments can be imported as an iCal file into Apple Calendar or Google Calendar.",
     upcoming: "Upcoming appointments",
     upcomingEmpty: "No upcoming appointments.",
@@ -1217,7 +1220,7 @@ export const en: Messages = {
   },
   applications: {
     kicker: "Your appointments",
-    title: "My requested appointments",
+    title: "My appointments",
     intro: "Here you see whether the salon is still reviewing your request, has confirmed it, or declined it.",
     empty: "No request yet. Choose an offer and request an open appointment.",
     sentTitle: "Your request has been sent!",
@@ -1598,6 +1601,9 @@ export const en: Messages = {
     titlePlaceholder: "Balayage training model",
     descriptionPlaceholder: "Balayage by a junior stylist under supervision.",
     ctaCreate: "+ Create new offer",
+    contactHint:
+      "Please add your address and phone number so your client knows where the appointment takes place after booking.",
+    contactHintLink: "Go to salon profile",
   },
   salon: {
     yourDeals: "Your offers",
@@ -1868,7 +1874,7 @@ export const en: Messages = {
         "Access, rectification, erasure, restriction and objection under applicable data protection law. Requests to carlo.raghias@bluewin.ch.",
       s8: "8. Cookies and analytics",
       s8p1:
-        "We use only technically necessary session cookies, in particular for login and session security. No analytics, advertising or tracking cookies are used.",
+        "We use technically necessary session cookies for login and session security. For product analytics we use Vercel Analytics and PostHog (usage events, no advertising). PostHog may set analytics cookies; data is sent to Vercel and PostHog in the EU/EEA where configured.",
     },
   },
   errors: {
@@ -2001,7 +2007,7 @@ export const fr: Messages = {
     app: "App",
     home: "Accueil",
     favorites: "Favoris",
-    applications: "Mes rendez-vous demandés",
+    applications: "Mes rendez-vous",
     profile: "Profil",
     dashboard: "Tableau de bord",
     offers: "Offre",
@@ -2036,7 +2042,7 @@ export const fr: Messages = {
     helpIntro: "Court et clair — comment fonctionne la place de marché TalentMatch.",
     helpRulesTitle: "Règles du marché",
     helpRulesBody:
-      "Les salons publient des offres préférentielles à des prix réduits. Tu postules avec des photos de cheveux, pas une réservation ferme. Le salon décide. Après l’acceptation, le rendez-vous, le nom et l’adresse deviennent visibles. Arrive à l’heure — une annulation de dernière minute pénalise les deux côtés.",
+      "Les salons publient des offres préférentielles à des prix réduits. Tu postules avec des photos de cheveux, pas une réservation ferme. Le salon décide. Après la confirmation ferme du rendez-vous, tu vois le nom, l’adresse et le téléphone. Arrive à l’heure — une annulation de dernière minute pénalise les deux côtés.",
     helpStrikesTitle: "Strikes et no-shows",
     helpStrikesBody:
       "Une absence non excusée ou une annulation très tardive donne un strike. Trois strikes actifs bloquent le compte cliente. Les strikes expirent après six mois. Ainsi les rendez-vous restent fiables — pour les modèles et les salons.",
@@ -2060,7 +2066,7 @@ export const fr: Messages = {
     salonHelpIntro: "Court et clair — comment gérer réservations, no-shows et frais sur TalentMatch.",
     salonHelpBookingsTitle: "Règles de réservation",
     salonHelpBookingsBody:
-      "Les clientes postulent avec des photos de cheveux, pas une réservation directe. Tu décides de chaque candidature. Après l’acceptation, le rendez-vous devient ferme avec nom, adresse et heure. Clôture les visites terminées pour que les deux côtés puissent noter.",
+      "Les clientes postulent avec des photos de cheveux, pas une réservation directe. Tu décides de chaque candidature. Après ta confirmation ferme, la cliente voit nom, adresse, téléphone et heure. Clôture les visites terminées pour que les deux côtés puissent noter.",
     salonHelpNoshowTitle: "Signalements de no-show",
     salonHelpNoshowBody:
       "Si quelqu’un ne vient pas sans prévenir, tu signales une absence. Cette personne reçoit un strike. Trois strikes actifs bloquent le compte cliente. Ainsi tes horaires libres restent fiables.",
@@ -2194,7 +2200,7 @@ export const fr: Messages = {
   appointments: {
     kicker: "Calendrier",
     title: "Mes rendez-vous",
-    introCustomer: "Pour les rendez-vous à venir, tu vois le vrai salon avec nom, téléphone et logo.",
+    introCustomer: "Après la confirmation ferme, tu vois le vrai salon avec nom, adresse, téléphone et logo.",
     introSalon:
       "Les rendez-vous confirmés s’importent en fichier iCal dans Apple Calendar ou Google Calendar.",
     upcoming: "Rendez-vous à venir",
@@ -2211,7 +2217,7 @@ export const fr: Messages = {
   },
   applications: {
     kicker: "Tes rendez-vous",
-    title: "Mes rendez-vous demandés",
+    title: "Mes rendez-vous",
     intro: "Ici tu vois si le salon examine encore ta demande, l’a confirmée ou l’a refusée.",
     empty: "Pas encore de demande. Choisis une offre et demande un horaire libre.",
     sentTitle: "Ta demande a été envoyée !",
@@ -2592,6 +2598,9 @@ export const fr: Messages = {
     titlePlaceholder: "Modèle Balayage Training",
     descriptionPlaceholder: "Balayage par un junior stylist sous supervision.",
     ctaCreate: "+ Créer une nouvelle offre",
+    contactHint:
+      "Ajoute une adresse et un numéro de téléphone pour que ta cliente sache où a lieu le rendez-vous après la réservation.",
+    contactHintLink: "Aller au profil salon",
   },
   salon: {
     yourDeals: "Tes offres",
@@ -2864,7 +2873,7 @@ export const fr: Messages = {
         "Accès, rectification, effacement, limitation et opposition selon le droit applicable à la protection des données. Demandes à carlo.raghias@bluewin.ch.",
       s8: "8. Cookies et analyse",
       s8p1:
-        "Nous n’utilisons que des cookies de session techniquement nécessaires, notamment pour le login et la sécurité de la session. Aucun cookie d’analyse, de publicité ou de tracking n’est utilisé.",
+        "Nous utilisons des cookies de session techniquement nécessaires pour le login et la sécurité de la session. Pour l’analyse produit, nous utilisons Vercel Analytics et PostHog (événements d’usage, pas de publicité). PostHog peut déposer des cookies d’analyse ; les données sont transmises à Vercel et PostHog dans l’UE/EEE, selon la configuration.",
     },
   },
   errors: {

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OfferLink } from "@/components/analytics/offer-link";
 import { formatChf, isStrongSaving, savingsPercent } from "@/lib/offers/format";
 import { UrgentCountdown } from "@/components/offers/urgent-countdown";
 import { earliestUnbookedSlot, type BrowseOffer } from "@/lib/offers/load-active-offers";
@@ -82,7 +82,7 @@ export function OfferCard({
     >
       {cover ? (
         <div className="relative -mx-5 -mt-5 mb-5 overflow-hidden sm:-mx-6 sm:-mt-6">
-          <CoverImage src={cover} className="aspect-[4/3] w-full object-cover" />
+          <CoverImage src={cover} className="aspect-[4/3] w-full object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
           {offer.is_urgent ? (
             <div className="absolute top-3 left-3 z-10">
@@ -110,9 +110,9 @@ export function OfferCard({
             </div>
           ) : null}
           <div className="flex items-start justify-between gap-3">
-            <Link href={`/offers/${offer.id}`} className="min-w-0 flex-1">
+            <OfferLink href={`/offers/${offer.id}`} offerId={offer.id} className="min-w-0 flex-1">
               <PartnerMark offer={offer} />
-            </Link>
+            </OfferLink>
             <div className="flex shrink-0 flex-col items-end gap-2">
               {liveSlot ? <UrgentCountdown iso={liveSlot.start_time} /> : null}
               {showFavorite ? <FavoriteHeart offerId={offer.id} initialSaved={favorited} /> : null}
@@ -122,9 +122,9 @@ export function OfferCard({
       )}
       {cover ? (
         <div className="flex items-start justify-between gap-3">
-          <Link href={`/offers/${offer.id}`} className="min-w-0 flex-1">
+          <OfferLink href={`/offers/${offer.id}`} offerId={offer.id} className="min-w-0 flex-1">
             <PartnerMark offer={offer} />
-          </Link>
+          </OfferLink>
           {liveSlot ? <UrgentCountdown iso={liveSlot.start_time} /> : null}
         </div>
       ) : null}
@@ -133,7 +133,7 @@ export function OfferCard({
           <T k="browse.perfectMatch" />
         </p>
       ) : null}
-      <Link href={`/offers/${offer.id}`} className="block">
+      <OfferLink href={`/offers/${offer.id}`} offerId={offer.id} className="block">
         <h2 className="mt-5 font-serif text-2xl leading-tight text-ink sm:text-3xl">{offer.title}</h2>
         {offer.description ? (
           <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-soft">{offer.description}</p>
@@ -159,7 +159,7 @@ export function OfferCard({
             </p>
           </div>
         </div>
-      </Link>
+      </OfferLink>
 
       <div className="mt-6">
         <p className="ui-kicker">

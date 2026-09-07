@@ -10,6 +10,7 @@ import { ScrollToId } from "@/components/ui/scroll-to-id";
 import { type SalonApplication } from "@/lib/applications/queries";
 import { formatSlot } from "@/lib/offers/format";
 import { StarAverage } from "@/components/ratings/star-average";
+import { AppImage } from "@/components/ui/app-image";
 
 export function IncomingApplications({
   applications,
@@ -50,11 +51,14 @@ export function IncomingApplications({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                   {application.customer.avatar_url ? (
-                    <img
-                      src={application.customer.avatar_url}
-                      alt=""
-                      className="h-12 w-12 rounded-xl object-cover ring-1 ring-zinc-200"
-                    />
+                    <div className="relative h-12 w-12 overflow-hidden rounded-xl ring-1 ring-zinc-200">
+                      <AppImage
+                        src={application.customer.avatar_url}
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                      />
+                    </div>
                   ) : (
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-100 font-serif text-lg text-zinc-600">
                       {application.customer.full_name.slice(0, 1).toUpperCase()}
@@ -113,12 +117,15 @@ export function IncomingApplications({
                         const label = imageLabels[index] ?? t("common.imageN", { n: index + 1 });
                         return (
                           <figure key={url} className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={url}
-                              alt={label}
-                              className="h-48 w-full object-cover"
-                            />
+                            <div className="relative h-48 w-full">
+                              <AppImage
+                                src={url}
+                                alt={label}
+                                fill
+                                sizes="(max-width: 640px) 100vw, 240px"
+                                className="object-cover"
+                              />
+                            </div>
                             <figcaption className="px-3 py-2 ui-kicker">{label}</figcaption>
                           </figure>
                         );

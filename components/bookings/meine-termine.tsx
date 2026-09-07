@@ -21,6 +21,7 @@ import { intlLocale } from "@/lib/i18n/config";
 import { type MessageKey } from "@/lib/i18n/messages";
 import { useLocale, useT } from "@/components/i18n/i18n-provider";
 import { ConfirmedBadge } from "@/components/ui/confirmed-badge";
+import { AppImage } from "@/components/ui/app-image";
 import { EmptyExplore } from "@/components/ui/empty-explore";
 
 function StatusBadge({ status }: { status: AppointmentOverview["status"] }) {
@@ -61,7 +62,15 @@ function AppointmentCard({
   focused?: boolean;
   openChat?: boolean;
 }) {
-  const showPhone = Boolean(item.counterpart_phone);
+  const contactRevealed =
+    role === "salon" ||
+    Boolean(item.contact_revealed) ||
+    item.status === "confirmed" ||
+    item.status === "completed";
+  const showPhone = contactRevealed && Boolean(item.counterpart_phone);
+  const showAddress = role === "customer" && contactRevealed && Boolean(item.counterpart_address);
+  const showRegion =
+    role === "customer" && !showAddress && Boolean(item.event_location);
   const showChat = isMessagingEnabled(item.status);
   const t = useT();
   const locale = useLocale();
@@ -74,11 +83,14 @@ function AppointmentCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           {item.counterpart_logo_url ? (
-            <img
-              src={item.counterpart_logo_url}
-              alt=""
-              className="h-12 w-12 shrink-0 rounded-2xl object-cover ring-1 ring-white/40"
-            />
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/40">
+              <AppImage
+                src={item.counterpart_logo_url}
+                fill
+                sizes="48px"
+                className="object-cover"
+              />
+            </div>
           ) : (
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/70 font-serif text-lg text-zinc-500 backdrop-blur-md">
               {item.counterpart_name.slice(0, 1).toUpperCase()}
@@ -89,8 +101,11 @@ function AppointmentCard({
             {showPhone ? (
               <p className="mt-0.5 text-sm text-ink-soft">{item.counterpart_phone}</p>
             ) : null}
-            {role === "customer" && item.counterpart_address ? (
+            {showAddress ? (
               <p className="mt-0.5 text-sm text-ink-soft">{item.counterpart_address}</p>
+            ) : null}
+            {showRegion ? (
+              <p className="mt-0.5 text-sm text-ink-soft">{item.event_location}</p>
             ) : null}
             {role === "salon" && item.counterpart_email ? (
               <p className="mt-0.5 truncate text-sm text-ink-soft">{item.counterpart_email}</p>

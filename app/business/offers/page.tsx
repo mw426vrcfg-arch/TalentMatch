@@ -4,9 +4,11 @@ import { SalonShell } from "@/components/business/salon-shell";
 import { T } from "@/components/i18n/t";
 import { requireBusiness } from "@/lib/auth/require-business";
 import { resolveLogoUrl } from "@/lib/business/images";
+import { salonVenueContactMissing } from "@/lib/business/profile-store";
 import { loadSalonOffers } from "@/lib/offers/salon-list";
 import { loadUrgentMatchQuota } from "@/lib/offers/urgent-quota";
 import { createAdminClient } from "@/lib/supabase/admin";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,7 @@ export default async function SalonOffersPage({
   const { created, updated } = await searchParams;
   const { business } = await requireBusiness();
   const salonName = business?.business_name;
+  const missingVenueContact = salonVenueContactMissing(business);
   const admin = createAdminClient();
   const liveOffers = business ? await loadSalonOffers(business.id) : [];
 
@@ -45,11 +48,20 @@ export default async function SalonOffersPage({
           <T k="salon.editHint" />
         </p>
         <div className="mt-8">
+          {missingVenueContact ? (
+            <p className="mb-4 rounded-[22px] border border-amber-200/80 bg-amber-50/90 p-4 text-sm leading-relaxed text-amber-950">
+              <T k="create.contactHint" />{" "}
+              <Link href="/business/profile" className="font-medium underline underline-offset-2">
+                <T k="create.contactHintLink" />
+              </Link>
+            </p>
+          ) : null}
           <CreateOfferWorkspace
             location={business?.location}
             urgentLimitReached={urgentQuota.reached}
             urgentLimit={urgentQuota.limit}
             urgentUsed={urgentQuota.used}
+            missingVenueContact={missingVenueContact}
           />
         </div>
       </div>
@@ -75,6 +87,7 @@ export default async function SalonOffersPage({
           urgentLimitReached={urgentQuota.reached}
           urgentLimit={urgentQuota.limit}
           urgentUsed={urgentQuota.used}
+          missingVenueContact={missingVenueContact}
           empty={<T k="salon.emptyOffersFirst" />}
         />
       </div>

@@ -2,6 +2,7 @@
 
 import { type BeforeAfterPair } from "@/lib/portfolio/before-after";
 import { useT } from "@/components/i18n/i18n-provider";
+import { AppImage } from "@/components/ui/app-image";
 
 export function BeforeAfterCarousel({ pairs }: { pairs: BeforeAfterPair[] }) {
   const t = useT();
@@ -19,13 +20,29 @@ export function BeforeAfterCarousel({ pairs }: { pairs: BeforeAfterPair[] }) {
         >
           <div className="grid grid-cols-2">
             <figure>
-              <img src={pair.before_url} alt={t("common.before")} className="h-56 w-full object-cover sm:h-64" />
+              <div className="relative h-56 w-full sm:h-64">
+                <AppImage
+                  src={pair.before_url}
+                  alt={t("common.before")}
+                  fill
+                  sizes="(max-width: 640px) 50vw, 224px"
+                  className="object-cover"
+                />
+              </div>
               <figcaption className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">
                 {t("common.before")}
               </figcaption>
             </figure>
             <figure className="border-l border-white/30">
-              <img src={pair.after_url} alt={t("common.after")} className="h-56 w-full object-cover sm:h-64" />
+              <div className="relative h-56 w-full sm:h-64">
+                <AppImage
+                  src={pair.after_url}
+                  alt={t("common.after")}
+                  fill
+                  sizes="(max-width: 640px) 50vw, 224px"
+                  className="object-cover"
+                />
+              </div>
               <figcaption className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">
                 {t("common.after")}
               </figcaption>

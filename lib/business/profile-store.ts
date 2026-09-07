@@ -114,6 +114,12 @@ export function mapBusinessRow(row: unknown, userId?: string): BusinessProfile |
   };
 }
 
+export function salonVenueContactMissing(
+  profile: Pick<BusinessProfile, "address" | "phone"> | null | undefined,
+) {
+  return !profile?.address?.trim() || !profile?.phone?.trim();
+}
+
 function rowFilledScore(row: unknown) {
   const mapped = mapBusinessRow(row);
   if (!mapped) {

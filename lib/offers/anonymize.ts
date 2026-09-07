@@ -27,13 +27,13 @@ export function regionLabel(city: string | null | undefined) {
   return `Region ${value}`;
 }
 
+export function isSalonContactRevealed(bookingStatus?: string | null) {
+  return bookingStatus === "confirmed" || bookingStatus === "completed";
+}
+
 export function isSalonIdentityRevealed(
-  applicationStatus: string,
+  _applicationStatus: string,
   bookingStatus?: string | null,
 ) {
-  return (
-    applicationStatus === "accepted" ||
-    bookingStatus === "confirmed" ||
-    bookingStatus === "completed"
-  );
+  return isSalonContactRevealed(bookingStatus);
 }

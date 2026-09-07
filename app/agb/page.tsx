@@ -1,13 +1,14 @@
-import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { LegalAgb } from "@/components/legal/legal-agb";
-import { LOCALE_COOKIE, parseLocale } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 import { translate } from "@/lib/i18n/messages";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = parseLocale((await cookies()).get(LOCALE_COOKIE)?.value);
-  return { title: `${translate(locale, "settings.terms")} · TalentMatch` };
-}
+export const revalidate = 60;
+export const dynamic = "force-static";
+
+export const metadata: Metadata = {
+  title: `${translate(DEFAULT_LOCALE, "settings.terms")} · TalentMatch`,
+};
 
 export default function AgbPage() {
   return <LegalAgb />;

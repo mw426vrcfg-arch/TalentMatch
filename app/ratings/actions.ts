@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireBusiness } from "@/lib/auth/require-business";
 import { requireCustomer } from "@/lib/auth/require-customer";
+import { revalidatePublicOffers } from "@/lib/offers/public-cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { savePortfolioPair, uploadBeforeAfterImage } from "@/lib/portfolio/before-after";
 import { readId, readText, TEXT_LIMITS } from "@/lib/security/sanitize";
@@ -89,7 +90,10 @@ async function saveRating(fromUserId: string, formData: FormData, path: string) 
 
   revalidatePath(path);
   revalidatePath("/offers");
+  revalidatePublicOffers();
   revalidatePath("/dashboard/profile");
+  revalidatePath("/dashboard/applications");
   revalidatePath("/business/profile");
+  revalidatePath("/business/applications");
   return { success: "Danke, deine Bewertung ist gespeichert." };
 }

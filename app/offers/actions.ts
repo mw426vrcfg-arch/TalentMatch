@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { APPLICATION_IMAGES_BUCKET } from "@/lib/applications/image-urls";
 import { notesWithSlotRef } from "@/lib/applications/slot-from-notes";
 import { createNotification } from "@/lib/notifications/create";
@@ -15,6 +14,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ApplyFormState = {
   error?: string;
+  ok?: boolean;
+  redirectTo?: string;
 };
 
 const IMAGE_KEYS = ["front", "back", "side"] as const;
@@ -170,5 +171,5 @@ export async function applyToOfferAction(
 
   revalidatePath("/business/dashboard");
   revalidatePath("/dashboard");
-  redirect(`/dashboard/applications?applied=1`);
+  return { ok: true, redirectTo: "/dashboard/applications?applied=1" };
 }

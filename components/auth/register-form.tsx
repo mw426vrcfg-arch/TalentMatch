@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { registerAction } from "@/app/auth/actions";
 import { type AuthState } from "@/lib/auth/auth-state";
 import { isValidEmail, MIN_PASSWORD_LENGTH } from "@/lib/auth/credentials";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics/track";
 import { PasswordField } from "@/components/auth/password-field";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { BusyLabel } from "@/components/ui/busy-label";
@@ -26,6 +28,8 @@ export function RegisterForm({
 }) {
   const t = useT();
   const localize = useLocalize();
+  const router = useRouter();
+  const trackedSignup = useRef(false);
   const [role, setRole] = useState<Role>(initialRole);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -39,6 +43,20 @@ export function RegisterForm({
       setChecking(false);
     }
   }, [pending]);
+
+  useEffect(() => {
+    if (!state.success && !state.redirectTo) {
+      return;
+    }
+    if (trackedSignup.current) {
+      return;
+    }
+    trackedSignup.current = true;
+    trackEvent(ANALYTICS_EVENTS.userSignedUp, { role });
+    if (state.redirectTo) {
+      router.replace(state.redirectTo);
+    }
+  }, [state.success, state.redirectTo, role, router]);
 
   const banner = clientError || (state.error ? localize(state.error) : "");
 

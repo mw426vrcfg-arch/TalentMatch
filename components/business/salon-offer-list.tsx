@@ -12,6 +12,7 @@ export function SalonOfferList({
   urgentLimitReached = false,
   urgentLimit = 3,
   urgentUsed = 0,
+  missingVenueContact = false,
   empty,
 }: {
   offers: SalonOfferListItem[];
@@ -19,6 +20,7 @@ export function SalonOfferList({
   urgentLimitReached?: boolean;
   urgentLimit?: number;
   urgentUsed?: number;
+  missingVenueContact?: boolean;
   empty: ReactNode;
 }) {
   const t = useT();
@@ -67,6 +69,7 @@ export function SalonOfferList({
             urgentLimitReached={urgentLimitReached}
             urgentLimit={urgentLimit}
             urgentUsed={urgentUsed}
+            missingVenueContact={missingVenueContact}
             onDeleted={handleDeleted}
           />
         </div>

@@ -8,6 +8,7 @@ import {
 } from "@/app/dashboard/profile/actions";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { MAX_PORTFOLIO_IMAGES } from "@/lib/customer/portfolio";
+import { AppImage } from "@/components/ui/app-image";
 
 const initialState: HairPortfolioFormState = {};
 
@@ -40,7 +41,13 @@ export function HairPortfolioEditor({ images }: { images: string[] }) {
             key={url}
             className="ui-glass group relative aspect-[3/4] overflow-hidden rounded-[22px]"
           >
-            <img src={url} alt={t("profile.hairAlt", { n: index + 1 })} className="h-full w-full object-cover" />
+            <AppImage
+              src={url}
+              alt={t("profile.hairAlt", { n: index + 1 })}
+              fill
+              sizes="(max-width: 640px) 50vw, 280px"
+              className="object-cover"
+            />
             <form action={removeHairPortfolioImageAction} className="absolute right-2 top-2">
               <input type="hidden" name="url" value={url} />
               <button

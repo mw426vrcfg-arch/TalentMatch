@@ -7,6 +7,7 @@ import { canSeeVipOffer, type MemberLevel, vipUnlockAt } from "@/lib/loyalty/lev
 import { formatChf } from "@/lib/offers/format";
 import { earliestUnbookedSlot } from "@/lib/offers/load-active-offers";
 import type { InspirationTile } from "@/lib/inspiration/types";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics/track";
 import { SlotChoices } from "@/components/offers/slot-choices";
 import { FavoriteHeart } from "@/components/offers/favorite-heart";
 import { UrgentCountdown } from "@/components/offers/urgent-countdown";
@@ -107,7 +108,12 @@ export function InspirationFeed({
               ) : null}
               <button
                 type="button"
-                onClick={() => setActive(tile)}
+                onClick={() => {
+                  if (tile.offer?.id) {
+                    trackEvent(ANALYTICS_EVENTS.viewOffer, { offer_id: tile.offer.id });
+                  }
+                  setActive(tile);
+                }}
                 className="w-full text-left transition-all duration-300 ease-out hover:scale-[1.015] active:scale-95"
               >
                 {image ? (

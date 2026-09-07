@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { applyToOfferAction, type ApplyFormState } from "@/app/offers/actions";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics/track";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { BusyLabel } from "@/components/ui/busy-label";
 
@@ -15,7 +17,23 @@ type ApplyFormProps = {
 export function ApplyForm({ offerId, slotId }: ApplyFormProps) {
   const t = useT();
   const localize = useLocalize();
+  const router = useRouter();
+  const trackedRequest = useRef(false);
   const [state, formAction, pending] = useActionState(applyToOfferAction, initialState);
+
+  useEffect(() => {
+    if (!state.ok || trackedRequest.current) {
+      return;
+    }
+    trackedRequest.current = true;
+    trackEvent(ANALYTICS_EVENTS.requestAppointment, {
+      offer_id: offerId,
+      slot_id: slotId,
+    });
+    if (state.redirectTo) {
+      router.replace(state.redirectTo);
+    }
+  }, [state.ok, state.redirectTo, offerId, slotId, router]);
 
   return (
     <form action={formAction} className="space-y-5">

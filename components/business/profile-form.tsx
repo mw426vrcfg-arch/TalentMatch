@@ -11,6 +11,7 @@ import { resolveLogoUrl } from "@/lib/business/images";
 import { useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { type GenderValue } from "@/lib/profile/gender";
 import { BusyLabel } from "@/components/ui/busy-label";
+import { AppImage } from "@/components/ui/app-image";
 
 const initialState: ProfileFormState = {};
 
@@ -101,11 +102,15 @@ export function BusinessProfileForm({
       <div className="flex items-center gap-4">
         <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/70 shadow-[0_8px_24px_rgba(15,15,20,0.05)] backdrop-blur-md">
           {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={t("profile.logoAlt")}
-              className="h-full w-full object-cover"
-            />
+            <div className="relative h-full w-full">
+              <AppImage
+                src={logoUrl}
+                alt={t("profile.logoAlt")}
+                fill
+                sizes="80px"
+                className="object-cover"
+              />
+            </div>
           ) : (
             <span className="ui-kicker">{t("profile.logo")}</span>
           )}
