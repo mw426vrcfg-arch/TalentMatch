@@ -250,6 +250,15 @@ export const de = {
     customTimeChatHint: "Oder schreibe unten einen Gegenvorschlag.",
     customTimeSent:
       "Deine Wunschzeit wurde an den Salon geschickt. Du bekommst eine Rückmeldung im Chat.",
+    finalizeAppointment: "Finalen Termin festlegen & Akzeptieren",
+    finalizeTitle: "Finalen Termin festlegen",
+    finalizeIntro:
+      "Trage die im Chat vereinbarte Zeit ein. Danach ist der Termin verbindlich — inkl. Bewertungen und Punkte.",
+    finalAgreedTime: "Final vereinbarte Zeit",
+    finalAgreedPlaceholder: "17. Okt, 18:00 Uhr",
+    calendarTime: "Kalenderzeit",
+    calendarTimeHint: "Legt den Termin für Buchung, Kalender, Bewertungen und Punkte fest.",
+    officialConfirmed: "✅ Der Salon hat den Termin offiziell bestätigt für: {time}",
   },
   favorites: {
     kicker: "Gespeichert",
@@ -268,6 +277,7 @@ export const de = {
     empty: "Aktuell keine neuen Benachrichtigungen",
     aria: "Benachrichtigungen",
     ariaUnread: "{count} neue Benachrichtigungen",
+    openInbox: "Nachrichten öffnen",
   },
   chat: {
     kicker: "Nachrichten",
@@ -1283,6 +1293,15 @@ export const en: Messages = {
     confirmExactTime: "Set the confirmed time",
     customTimeChatHint: "Or write a counter-proposal below.",
     customTimeSent: "Your preferred time was sent to the salon. You’ll hear back in chat.",
+    finalizeAppointment: "Set final time & accept",
+    finalizeTitle: "Set the final appointment",
+    finalizeIntro:
+      "Enter the time you agreed in chat. The appointment then becomes binding — including ratings and points.",
+    finalAgreedTime: "Final agreed time",
+    finalAgreedPlaceholder: "17 Oct, 6:00 pm",
+    calendarTime: "Calendar time",
+    calendarTimeHint: "Used for the booking, calendar, ratings and points.",
+    officialConfirmed: "✅ The salon has officially confirmed the appointment for: {time}",
   },
   favorites: {
     kicker: "Saved",
@@ -1301,6 +1320,7 @@ export const en: Messages = {
     empty: "No new notifications right now",
     aria: "Notifications",
     ariaUnread: "{count} new notifications",
+    openInbox: "Open messages",
   },
   chat: {
     kicker: "Messages",
@@ -2307,6 +2327,15 @@ export const fr: Messages = {
     confirmExactTime: "Définir l’heure confirmée",
     customTimeChatHint: "Ou écris une contre-proposition ci-dessous.",
     customTimeSent: "Ton horaire souhaité a été envoyé au salon. Tu recevras une réponse dans le chat.",
+    finalizeAppointment: "Fixer l’horaire final et accepter",
+    finalizeTitle: "Fixer l’horaire final",
+    finalizeIntro:
+      "Saisis l’heure convenue dans le chat. Le rendez-vous devient alors contraignant — y compris notes et points.",
+    finalAgreedTime: "Horaire finalement convenu",
+    finalAgreedPlaceholder: "17 oct., 18h00",
+    calendarTime: "Heure calendrier",
+    calendarTimeHint: "Sert à la réservation, au calendrier, aux notes et aux points.",
+    officialConfirmed: "✅ Le salon a officiellement confirmé le rendez-vous pour : {time}",
   },
   favorites: {
     kicker: "Enregistré",
@@ -2325,6 +2354,7 @@ export const fr: Messages = {
     empty: "Aucune nouvelle notification pour le moment",
     aria: "Notifications",
     ariaUnread: "{count} nouvelles notifications",
+    openInbox: "Ouvrir les messages",
   },
   chat: {
     kicker: "Messages",

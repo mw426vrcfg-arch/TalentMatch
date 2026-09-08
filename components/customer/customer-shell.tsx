@@ -5,6 +5,7 @@ import { GuestAuthLinks } from "@/components/i18n/auth-buttons";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { T } from "@/components/i18n/t";
 import { InAppPushHost } from "@/components/notifications/in-app-push-host";
+import { NotificationBellHost } from "@/components/notifications/notification-bell-host";
 import { type MessageKey } from "@/lib/i18n/messages";
 import { type ReactNode } from "react";
 
@@ -37,8 +38,9 @@ export function CustomerShell({
             {title ?? <T k={titleKey} />}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {headerAction}
+          {signedIn ? <NotificationBellHost /> : null}
           <LanguageSwitcher compact />
           {signedIn ? <CustomerAccountHost fallbackName={userName} /> : <GuestAuthLinks />}
         </div>

@@ -1,5 +1,6 @@
 export const REQUESTED_CUSTOM_TIME = "requested_custom_time";
 export const CUSTOM_TIME_MARKER = "[custom_time]";
+export const OFFICIAL_CONFIRM_MARKER = "[system:official_confirm]";
 
 export function isCustomTimeRequest(
   status?: string | null,
@@ -42,9 +43,32 @@ export function notesWithCustomTime(notes: string, customTime: string) {
     .join("\n");
 }
 
+export function notesWithFinalTime(notes: string, finalTime: string) {
+  const withoutOld = notes.replace(/\n*Finaltermin:\s*.*$/gim, "").trim();
+  return [withoutOld, `Finaltermin: ${finalTime}`].filter(Boolean).join("\n");
+}
+
 export function customTimeRequestChatMessage(offerTitle: string, customTime: string) {
   const title = offerTitle.trim() || "Angebot";
   return `Hallo! Ich habe Interesse an eurem Angebot '${title}', aber die Zeiten passen mir nicht ganz. Mein Wunschtermin wäre: ${customTime}. Passt euch das?`;
+}
+
+export function officialConfirmChatMessage(finalTime: string) {
+  return `${OFFICIAL_CONFIRM_MARKER}✅ Der Salon hat den Termin offiziell bestätigt für: ${finalTime}`;
+}
+
+export function officialConfirmDisplay(body: string) {
+  if (body.startsWith(OFFICIAL_CONFIRM_MARKER)) {
+    return body.slice(OFFICIAL_CONFIRM_MARKER.length).trim();
+  }
+  return body;
+}
+
+export function isOfficialConfirmMessage(body: string) {
+  return (
+    body.startsWith(OFFICIAL_CONFIRM_MARKER) ||
+    body.startsWith("✅ Der Salon hat den Termin offiziell bestätigt für:")
+  );
 }
 
 export function isInvalidApplicationStatusError(message: string) {

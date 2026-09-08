@@ -38,7 +38,7 @@ export async function SalonShell({ salonName, location, logoUrl, headerAction, c
             </p>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {headerAction}
           <div className="hidden text-right sm:block">
             <p className="max-w-36 truncate text-sm font-medium text-ink">

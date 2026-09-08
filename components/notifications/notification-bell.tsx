@@ -12,6 +12,7 @@ import {
 } from "@/lib/notifications/rows";
 import { hrefForNotification } from "@/lib/notifications/links";
 import { createClient } from "@/lib/supabase/client";
+import { mapChatMessage } from "@/lib/messages/store";
 import { type UserRole } from "@/lib/supabase/env";
 import { hapticTap } from "@/lib/ui/haptic";
 import { intlLocale } from "@/lib/i18n/config";
@@ -55,13 +56,16 @@ export function NotificationBell({
   userId,
   role,
   initialItems,
+  inboxHref = "/dashboard/applications",
 }: {
   userId: string;
   role: UserRole;
   initialItems: NotificationRow[];
+  inboxHref?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationRow[]>(initialItems);
+  const [chatUnread, setChatUnread] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const t = useT();
   const localize = useLocalize();
@@ -162,6 +166,20 @@ export function NotificationBell({
           }
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const incoming = mapChatMessage(payload.new);
+          if (incoming && incoming.sender_id !== userId) {
+            setChatUnread(true);
+          }
+        },
+      )
       .subscribe();
 
     const poll = window.setInterval(() => {
@@ -189,9 +207,11 @@ export function NotificationBell({
   }, []);
 
   const unread = items.filter((item) => !wasCleared(userId, item)).length;
+  const hasUnread = unread > 0 || chatUnread;
 
   function markVisibleRead() {
     lastClearedAt.set(userId, Date.now());
+    setChatUnread(false);
     setItems((current) => {
       for (const item of current) {
         markedReadIds.current.add(item.id);
@@ -211,13 +231,17 @@ export function NotificationBell({
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative shrink-0">
       <button
         type="button"
         onClick={toggleOpen}
         className="relative ui-icon-btn"
         aria-expanded={open}
-        aria-label={unread > 0 ? t("notifications.ariaUnread", { count: unread }) : t("notifications.aria")}
+        aria-label={
+          hasUnread
+            ? t("notifications.ariaUnread", { count: Math.max(unread, 1) })
+            : t("notifications.aria")
+        }
       >
         <svg
           viewBox="0 0 24 24"
@@ -233,15 +257,13 @@ export function NotificationBell({
             d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5m6 0a3 3 0 1 1-6 0m6 0H9"
           />
         </svg>
-        {unread > 0 ? (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose px-1 text-[11px] font-semibold leading-none text-cream">
-            {unread > 9 ? "9+" : unread}
-          </span>
+        {hasUnread ? (
+          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose ring-2 ring-white" />
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-50 mt-3 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-[24px] border border-white/25 bg-white/78 shadow-[0_24px_80px_rgba(15,15,20,0.14)] backdrop-blur-2xl ui-sheet">
+        <div className="absolute right-0 z-50 mt-3 w-[min(22rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[24px] border border-white/25 bg-white/78 shadow-[0_24px_80px_rgba(15,15,20,0.14)] backdrop-blur-2xl ui-sheet">
           <div className="border-b border-white/25 px-4 py-3">
             <p className="ui-kicker">{t("notifications.title")}</p>
             <p className="mt-1 text-sm text-ink">{t("notifications.subtitle")}</p>
@@ -275,6 +297,18 @@ export function NotificationBell({
               })
             )}
           </ul>
+          <div className="border-t border-white/25 p-2">
+            <Link
+              href={inboxHref}
+              onClick={() => {
+                hapticTap("light");
+                setOpen(false);
+              }}
+              className="flex min-h-11 items-center justify-center rounded-2xl px-4 text-sm font-medium text-ink transition duration-300 hover:bg-white/70"
+            >
+              {t("notifications.openInbox")}
+            </Link>
+          </div>
         </div>
       ) : null}
     </div>

@@ -3,23 +3,27 @@
 import { revalidatePath } from "next/cache";
 import {
   isCustomTimeRequest,
+  notesWithFinalTime,
+  officialConfirmChatMessage,
   parseCustomTimeNotes,
   REQUESTED_CUSTOM_TIME,
 } from "@/lib/applications/custom-time";
 import { notesWithSlotRef, parseSlotIdFromNotes } from "@/lib/applications/slot-from-notes";
 import { requireBusiness } from "@/lib/auth/require-business";
-import { insertChatMessage } from "@/lib/messages/store";
+import { insertChatMessage, type ChatMessage } from "@/lib/messages/store";
 import { revalidatePublicOffers } from "@/lib/offers/public-cache";
 import { createNotification } from "@/lib/notifications/create";
 import { refreshOfferAvailability } from "@/lib/offers/availability";
 import { formatAppointmentWhen } from "@/lib/offers/format";
 import { combineLocalDateTime } from "@/lib/offers/slot-schedule";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { readId } from "@/lib/security/sanitize";
+import { readId, readText, TEXT_LIMITS } from "@/lib/security/sanitize";
+import { missingColumnFromError } from "@/lib/supabase/flexible-write";
 
 export type ReviewState = {
   error?: string;
   ok?: boolean;
+  confirmMessage?: ChatMessage;
 };
 
 function parseConfirmedStart(formData: FormData) {
@@ -295,10 +299,15 @@ export async function acceptCustomTimeAction(
   }
 
   const applicationId = readId(formData, "application_id");
+  const finalTime = readText(formData, "final_time", TEXT_LIMITS.shortNote);
   const startIso = parseConfirmedStart(formData);
 
   if (!applicationId) {
     return { error: "Ungültige Entscheidung." };
+  }
+
+  if (!finalTime) {
+    return { error: "Bitte die im Chat vereinbarte Zeit eintragen." };
   }
 
   if (!startIso) {
@@ -349,23 +358,40 @@ export async function acceptCustomTimeAction(
 
   const customTime =
     parseCustomTimeNotes(application.notes, application.custom_time_notes) ?? application.notes ?? "";
-  const notes = notesWithSlotRef(application.notes ?? customTime, slot.id as string, slot.start_time as string);
+  const notes = notesWithSlotRef(
+    notesWithFinalTime(application.notes ?? customTime, finalTime),
+    slot.id as string,
+    slot.start_time as string,
+  );
 
-  let acceptError = (
-    await admin
+  const updatePayload: Record<string, unknown> = {
+    status: "accepted",
+    notes,
+    custom_time_notes: finalTime,
+    final_time: finalTime,
+  };
+
+  let acceptErrorMessage: string | null = null;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const { error: acceptError } = await admin
       .from("applications")
-      .update({ status: "accepted", notes })
-      .eq("id", application.id)
-  ).error;
-
-  if (acceptError && /notes/i.test(acceptError.message)) {
-    acceptError = (await admin.from("applications").update({ status: "accepted" }).eq("id", application.id))
-      .error;
+      .update(updatePayload)
+      .eq("id", application.id);
+    if (!acceptError) {
+      acceptErrorMessage = null;
+      break;
+    }
+    const column = missingColumnFromError(acceptError.message);
+    if (!column || !(column in updatePayload)) {
+      acceptErrorMessage = acceptError.message;
+      break;
+    }
+    delete updatePayload[column];
   }
 
-  if (acceptError) {
+  if (acceptErrorMessage) {
     await admin.from("offer_slots").delete().eq("id", slot.id);
-    return { error: acceptError.message };
+    return { error: acceptErrorMessage };
   }
 
   const { error: bookingError } = await admin.from("bookings").insert({
@@ -385,12 +411,13 @@ export async function acceptCustomTimeAction(
   }
 
   const when = formatAppointmentWhen(slot.start_time as string);
+  let confirmMessage: ChatMessage | undefined;
 
   try {
-    await insertChatMessage(admin, {
+    confirmMessage = await insertChatMessage(admin, {
       applicationId: application.id,
       senderId: user.id,
-      body: `Wir bestätigen deinen Wunschtermin am ${when}.`,
+      body: officialConfirmChatMessage(finalTime),
     });
   } catch (chatError) {
     console.error(
@@ -410,5 +437,5 @@ export async function acceptCustomTimeAction(
 
   await refreshOfferAvailability(admin, application.offer_id);
   revalidateAfterReview(application.offer_id);
-  return { ok: true };
+  return { ok: true, confirmMessage };
 }

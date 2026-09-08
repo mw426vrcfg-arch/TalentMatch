@@ -26,7 +26,16 @@ export async function NotificationBellHost() {
     }
 
     const initialItems = await loadNotificationsForUser(user.id);
-    return <NotificationBell userId={user.id} role={role} initialItems={initialItems} />;
+    const inboxHref =
+      role === "business" || role === "admin" ? "/business/applications" : "/dashboard/applications";
+    return (
+      <NotificationBell
+        userId={user.id}
+        role={role}
+        initialItems={initialItems}
+        inboxHref={inboxHref}
+      />
+    );
   } catch (error) {
     console.error(
       "Notification bell failed:",

@@ -132,6 +132,7 @@ create table public.applications (
   uploaded_images text[] not null default '{}',
   notes text,
   custom_time_notes text,
+  final_time text,
   status public.application_status not null default 'pending',
   created_at timestamptz not null default now()
 );

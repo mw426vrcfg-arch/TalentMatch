@@ -12,6 +12,9 @@ end $$;
 alter table public.applications
   add column if not exists custom_time_notes text;
 
+alter table public.applications
+  add column if not exists final_time text;
+
 do $$
 begin
   alter table public.applications drop constraint if exists applications_status_check;

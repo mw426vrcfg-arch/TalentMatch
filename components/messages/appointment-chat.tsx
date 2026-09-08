@@ -17,6 +17,10 @@ import { intlLocale } from "@/lib/i18n/config";
 import { useLocale, useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { BusyLabel } from "@/components/ui/busy-label";
 import { CustomTimeActions } from "@/components/messages/custom-time-actions";
+import {
+  isOfficialConfirmMessage,
+  officialConfirmDisplay,
+} from "@/lib/applications/custom-time";
 
 function formatWhen(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
@@ -46,6 +50,7 @@ export function AppointmentChat({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [peerTyping, setPeerTyping] = useState(false);
+  const [customTimeLocked, setCustomTimeLocked] = useState(false);
   const t = useT();
   const localize = useLocalize();
   const locale = useLocale();
@@ -296,6 +301,16 @@ export function AppointmentChat({
           </p>
         ) : (
           messages.map((message) => {
+            if (isOfficialConfirmMessage(message.body)) {
+              return (
+                <div
+                  key={message.id}
+                  className="rounded-2xl border border-emerald-200/80 bg-emerald-50/95 px-3 py-2.5 text-center text-sm font-medium leading-relaxed text-emerald-950"
+                >
+                  {officialConfirmDisplay(message.body)}
+                </div>
+              );
+            }
             const mine = message.sender_id === currentUserId;
             return (
               <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
@@ -317,11 +332,19 @@ export function AppointmentChat({
         )}
       </div>
       {error ? <p className="px-4 pb-2 text-xs text-rose">{error}</p> : null}
-      {salonCustomTime ? (
+      {salonCustomTime &&
+      !customTimeLocked &&
+      !messages.some((message) => isOfficialConfirmMessage(message.body)) ? (
         <CustomTimeActions
           applicationId={safeApplicationId}
           customTimeNotes={salonCustomTime.notes}
           onCounterProposal={() => inputRef.current?.focus()}
+          onConfirmed={(message) => {
+            if (message) {
+              mergeMessage(message);
+            }
+            setCustomTimeLocked(true);
+          }}
         />
       ) : null}
       <div className="border-t border-white/20">
