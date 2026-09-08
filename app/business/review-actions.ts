@@ -15,10 +15,10 @@ import { revalidatePublicOffers } from "@/lib/offers/public-cache";
 import { createNotification } from "@/lib/notifications/create";
 import { refreshOfferAvailability } from "@/lib/offers/availability";
 import { formatAppointmentWhen } from "@/lib/offers/format";
-import { combineLocalDateTime } from "@/lib/offers/slot-schedule";
+import { parseDateTimeLocalToIso } from "@/lib/offers/slot-schedule";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { readId, readText, TEXT_LIMITS } from "@/lib/security/sanitize";
-import { missingColumnFromError } from "@/lib/supabase/flexible-write";
+import { readId } from "@/lib/security/sanitize";
+import { insertFlexible, missingColumnFromError } from "@/lib/supabase/flexible-write";
 
 export type ReviewState = {
   error?: string;
@@ -26,10 +26,40 @@ export type ReviewState = {
   confirmMessage?: ChatMessage;
 };
 
+function isNextControlFlowError(error: unknown) {
+  if (typeof error !== "object" || error === null || !("digest" in error)) {
+    return false;
+  }
+  const digest = String((error as { digest?: unknown }).digest);
+  return digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_NOT_FOUND");
+}
+
 function parseConfirmedStart(formData: FormData) {
-  const raw = String(formData.get("confirmed_start") ?? "").trim();
-  const [date, time] = raw.split("T");
-  return combineLocalDateTime(date ?? "", time ?? "");
+  return parseDateTimeLocalToIso(String(formData.get("confirmed_start") ?? ""));
+}
+
+async function updateDroppingMissingColumns(
+  admin: ReturnType<typeof createAdminClient>,
+  table: string,
+  payload: Record<string, unknown>,
+  matchColumn: string,
+  matchValue: string,
+) {
+  const next: Record<string, unknown> = { ...payload };
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    if (Object.keys(next).length === 0) {
+      return;
+    }
+    const { error } = await admin.from(table).update(next).eq(matchColumn, matchValue);
+    if (!error) {
+      return;
+    }
+    const column = missingColumnFromError(error.message);
+    if (!column || !(column in next)) {
+      throw new Error(error.message);
+    }
+    delete next[column];
+  }
 }
 
 function revalidateAfterReview(offerId: string) {
@@ -292,150 +322,176 @@ export async function acceptCustomTimeAction(
   _prev: ReviewState,
   formData: FormData,
 ): Promise<ReviewState> {
-  const { user, business } = await requireBusiness();
-
-  if (!business) {
-    return { error: "Kein Salonprofil gefunden." };
-  }
-
-  const applicationId = readId(formData, "application_id");
-  const finalTime = readText(formData, "final_time", TEXT_LIMITS.shortNote);
-  const startIso = parseConfirmedStart(formData);
-
-  if (!applicationId) {
-    return { error: "Ungültige Entscheidung." };
-  }
-
-  if (!finalTime) {
-    return { error: "Bitte die im Chat vereinbarte Zeit eintragen." };
-  }
-
-  if (!startIso) {
-    return { error: "Bitte die bestätigte Uhrzeit setzen." };
-  }
-
-  const start = new Date(startIso);
-  if (Number.isNaN(start.getTime()) || start.getTime() < Date.now() - 60 * 1000) {
-    return { error: "Bitte eine Uhrzeit in der Zukunft wählen." };
-  }
-
-  const { admin, application, error } = await loadOwnedApplication(applicationId, business.id);
-  if (!application || error) {
-    return { error: error ?? "Bewerbung nicht gefunden." };
-  }
-
-  if (!isCustomTimeRequest(application.status, application.notes, application.custom_time_notes)) {
-    return { error: "Diese Anfrage ist kein Wunschtermin." };
-  }
-
-  if (application.status === "accepted" || application.status === "rejected") {
-    return { error: "Diese Bewerbung wurde bereits entschieden." };
-  }
-
-  const { data: offer } = await admin
-    .from("offers")
-    .select("id, title, duration_minutes")
-    .eq("id", application.offer_id)
-    .maybeSingle();
-
-  const durationMinutes = Number(offer?.duration_minutes) || 60;
-  const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
-
-  const { data: slot, error: slotError } = await admin
-    .from("offer_slots")
-    .insert({
-      offer_id: application.offer_id,
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-      is_booked: true,
-    })
-    .select("id, start_time")
-    .single();
-
-  if (slotError || !slot) {
-    return { error: slotError?.message ?? "Der Termin konnte nicht angelegt werden." };
-  }
-
-  const customTime =
-    parseCustomTimeNotes(application.notes, application.custom_time_notes) ?? application.notes ?? "";
-  const notes = notesWithSlotRef(
-    notesWithFinalTime(application.notes ?? customTime, finalTime),
-    slot.id as string,
-    slot.start_time as string,
-  );
-
-  const updatePayload: Record<string, unknown> = {
-    status: "accepted",
-    notes,
-    custom_time_notes: finalTime,
-    final_time: finalTime,
-  };
-
-  let acceptErrorMessage: string | null = null;
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const { error: acceptError } = await admin
-      .from("applications")
-      .update(updatePayload)
-      .eq("id", application.id);
-    if (!acceptError) {
-      acceptErrorMessage = null;
-      break;
-    }
-    const column = missingColumnFromError(acceptError.message);
-    if (!column || !(column in updatePayload)) {
-      acceptErrorMessage = acceptError.message;
-      break;
-    }
-    delete updatePayload[column];
-  }
-
-  if (acceptErrorMessage) {
-    await admin.from("offer_slots").delete().eq("id", slot.id);
-    return { error: acceptErrorMessage };
-  }
-
-  const { error: bookingError } = await admin.from("bookings").insert({
-    application_id: application.id,
-    slot_id: slot.id,
-    payment_status: "pending",
-    booking_status: "confirmed",
-    deposit_amount: 0,
-    platform_fee: 0,
-    salon_payout: 0,
-  });
-
-  if (bookingError && !bookingError.message.toLowerCase().includes("duplicate")) {
-    await admin.from("applications").update({ status: application.status }).eq("id", application.id);
-    await admin.from("offer_slots").update({ is_booked: false }).eq("id", slot.id);
-    return { error: bookingError.message };
-  }
-
-  const when = formatAppointmentWhen(slot.start_time as string);
-  let confirmMessage: ChatMessage | undefined;
-
   try {
-    confirmMessage = await insertChatMessage(admin, {
-      applicationId: application.id,
-      senderId: user.id,
-      body: officialConfirmChatMessage(finalTime),
-    });
-  } catch (chatError) {
-    console.error(
-      "Bestätigungsnachricht fehlgeschlagen:",
-      chatError instanceof Error ? chatError.message : chatError,
+    const { user, business } = await requireBusiness();
+
+    if (!business) {
+      return { error: "Kein Salonprofil gefunden." };
+    }
+
+    const applicationId = readId(formData, "application_id");
+    const startIso = parseConfirmedStart(formData);
+
+    if (!applicationId) {
+      return { error: "Ungültige Entscheidung." };
+    }
+
+    if (!startIso) {
+      return { error: "Bitte die bestätigte Uhrzeit setzen." };
+    }
+
+    const start = new Date(startIso);
+    if (Number.isNaN(start.getTime()) || start.getTime() < Date.now() - 60 * 1000) {
+      return { error: "Bitte eine Uhrzeit in der Zukunft wählen." };
+    }
+
+    const { admin, application, error } = await loadOwnedApplication(applicationId, business.id);
+    if (!application || error) {
+      return { error: error ?? "Bewerbung nicht gefunden." };
+    }
+
+    if (!isCustomTimeRequest(application.status, application.notes, application.custom_time_notes)) {
+      return { error: "Diese Anfrage ist kein Wunschtermin." };
+    }
+
+    if (application.status === "accepted" || application.status === "rejected") {
+      return { error: "Diese Bewerbung wurde bereits entschieden." };
+    }
+
+    const { data: offer } = await admin
+      .from("offers")
+      .select("id, title, duration_minutes")
+      .eq("id", application.offer_id)
+      .maybeSingle();
+
+    const durationMinutes = Number(offer?.duration_minutes) || 60;
+    const slotStartIso = start.toISOString();
+    const slotEndIso = new Date(start.getTime() + durationMinutes * 60 * 1000).toISOString();
+    const when = formatAppointmentWhen(slotStartIso);
+
+    const { data: slot, error: slotError } = await admin
+      .from("offer_slots")
+      .insert({
+        offer_id: application.offer_id,
+        start_time: slotStartIso,
+        end_time: slotEndIso,
+        is_booked: true,
+      })
+      .select("id, start_time")
+      .single();
+
+    if (slotError || !slot) {
+      return { error: slotError?.message ?? "Der Termin konnte nicht angelegt werden." };
+    }
+
+    const customTime =
+      parseCustomTimeNotes(application.notes, application.custom_time_notes) ?? application.notes ?? "";
+    const notes = notesWithSlotRef(
+      notesWithFinalTime(application.notes ?? customTime, when),
+      slot.id as string,
+      slot.start_time as string,
     );
+
+    const updatePayload: Record<string, unknown> = {
+      status: "accepted",
+      notes,
+      final_time: when,
+    };
+
+    let acceptErrorMessage: string | null = null;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const { error: acceptError } = await admin
+        .from("applications")
+        .update(updatePayload)
+        .eq("id", application.id);
+      if (!acceptError) {
+        acceptErrorMessage = null;
+        break;
+      }
+      const column = missingColumnFromError(acceptError.message);
+      if (!column || !(column in updatePayload)) {
+        acceptErrorMessage = acceptError.message;
+        break;
+      }
+      delete updatePayload[column];
+    }
+
+    if (acceptErrorMessage) {
+      await admin.from("offer_slots").delete().eq("id", slot.id);
+      return { error: acceptErrorMessage };
+    }
+
+    try {
+      await insertFlexible(admin, "bookings", {
+        application_id: application.id,
+        slot_id: slot.id,
+        payment_status: "pending",
+        booking_status: "confirmed",
+        deposit_amount: 0,
+        platform_fee: 0,
+        salon_payout: 0,
+        scheduled_at: slotStartIso,
+        start_time: slotStartIso,
+      });
+    } catch (bookingError) {
+      const message =
+        bookingError instanceof Error ? bookingError.message : "Die Buchung konnte nicht angelegt werden.";
+      if (!message.toLowerCase().includes("duplicate")) {
+        await admin.from("applications").update({ status: application.status }).eq("id", application.id);
+        await admin.from("offer_slots").update({ is_booked: false }).eq("id", slot.id);
+        return { error: message };
+      }
+    }
+
+    try {
+      await updateDroppingMissingColumns(
+        admin,
+        "bookings",
+        { scheduled_at: slotStartIso, start_time: slotStartIso },
+        "application_id",
+        application.id,
+      );
+    } catch (scheduleError) {
+      console.warn(
+        "Buchungszeit konnte nicht extra gespeichert werden:",
+        scheduleError instanceof Error ? scheduleError.message : scheduleError,
+      );
+    }
+
+    let confirmMessage: ChatMessage | undefined;
+
+    try {
+      confirmMessage = await insertChatMessage(admin, {
+        applicationId: application.id,
+        senderId: user.id,
+        body: officialConfirmChatMessage(when),
+      });
+    } catch (chatError) {
+      console.error(
+        "Bestätigungsnachricht fehlgeschlagen:",
+        chatError instanceof Error ? chatError.message : chatError,
+      );
+    }
+
+    await createNotification(admin, {
+      userId: application.customer_id,
+      type: "application_accepted",
+      title: "Der Salon hat dich angenommen",
+      message: `Dein Termin am ${when} wurde bestätigt!`,
+      applicationId: application.id,
+      offerId: application.offer_id,
+    });
+
+    await refreshOfferAvailability(admin, application.offer_id);
+    revalidateAfterReview(application.offer_id);
+    return { ok: true, confirmMessage };
+  } catch (error) {
+    if (isNextControlFlowError(error)) {
+      throw error;
+    }
+    console.error("Finalen Termin festlegen fehlgeschlagen:", error);
+    return {
+      error: error instanceof Error ? error.message : "Der Termin konnte nicht gespeichert werden.",
+    };
   }
-
-  await createNotification(admin, {
-    userId: application.customer_id,
-    type: "application_accepted",
-    title: "Der Salon hat dich angenommen",
-    message: `Dein Termin am ${when} wurde bestätigt!`,
-    applicationId: application.id,
-    offerId: application.offer_id,
-  });
-
-  await refreshOfferAvailability(admin, application.offer_id);
-  revalidateAfterReview(application.offer_id);
-  return { ok: true, confirmMessage };
 }
