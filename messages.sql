@@ -37,7 +37,13 @@ as $$
       on bp.id = o.business_id
       or bp.user_id = o.business_id
     where a.id = p_application_id
-      and a.status = 'accepted'
+      and a.status::text in (
+        'accepted',
+        'requested_custom_time',
+        'swap_requested',
+        'confirmed',
+        'completed'
+      )
       and (
         a.customer_id = auth.uid()
         or bp.user_id = auth.uid()
@@ -57,7 +63,10 @@ create policy messages_select_participants
   on public.messages
   for select
   to authenticated
-  using (public.can_chat_on_application(application_id));
+  using (
+    sender_id = auth.uid()
+    or public.can_chat_on_application(application_id)
+  );
 
 drop policy if exists messages_insert_own on public.messages;
 create policy messages_insert_own

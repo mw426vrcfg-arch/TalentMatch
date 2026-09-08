@@ -46,7 +46,7 @@ export function mapChatMessage(value: unknown): ChatMessage | null {
 
   return {
     id,
-    application_id: firstString(row, ["application_id"]) || "",
+    application_id: firstString(row, ["application_id"]) || firstString(row, ["booking_id"]) || "",
     booking_id: firstString(row, ["booking_id"]) || null,
     sender_id: senderId,
     body,
@@ -163,13 +163,106 @@ export async function assertChatParticipant(admin: Admin, userId: string, applic
   throw new Error("Kein Zugang zu diesem Chat.");
 }
 
+export function chatThreadIds(applicationId: string, bookingId?: string | null) {
+  return [...new Set([applicationId, bookingId].filter((value): value is string => Boolean(value)))];
+}
+
+export function mergeChatMessages(existing: ChatMessage[], incoming: ChatMessage[]) {
+  const byId = new Map<string, ChatMessage>();
+  for (const row of [...existing, ...incoming]) {
+    if (!row?.id) {
+      continue;
+    }
+    byId.set(row.id, row);
+  }
+  return [...byId.values()].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+}
+
+export function messageInThread(
+  message: ChatMessage,
+  applicationId: string,
+  bookingId?: string | null,
+) {
+  const ids = new Set(chatThreadIds(applicationId, bookingId));
+  return Boolean(
+    (message.application_id && ids.has(message.application_id)) ||
+      (message.booking_id && ids.has(message.booking_id)),
+  );
+}
+
+export function isUnthreadedChatMessage(message: ChatMessage) {
+  return !message.application_id && !message.booking_id;
+}
+
+async function loadConversationParticipantIds(admin: Admin, applicationId: string) {
+  const { data: application } = await admin
+    .from("applications")
+    .select("customer_id, offer_id, created_at")
+    .eq("id", applicationId)
+    .maybeSingle();
+  if (!application?.customer_id) {
+    return { participantIds: [] as string[], since: undefined as string | undefined };
+  }
+
+  const participantIds = [String(application.customer_id)];
+  const { data: offer } = await admin
+    .from("offers")
+    .select("business_id")
+    .eq("id", application.offer_id)
+    .maybeSingle();
+  const businessId = offer?.business_id ? String(offer.business_id) : "";
+  if (businessId) {
+    participantIds.push(businessId);
+    const { data: byId } = await admin
+      .from("business_profiles")
+      .select("id, user_id")
+      .eq("id", businessId)
+      .maybeSingle();
+    if (byId?.user_id) {
+      participantIds.push(String(byId.user_id));
+    }
+    if (byId?.id) {
+      participantIds.push(String(byId.id));
+    }
+    const { data: byUser } = await admin
+      .from("business_profiles")
+      .select("id, user_id")
+      .eq("user_id", businessId)
+      .maybeSingle();
+    if (byUser?.user_id) {
+      participantIds.push(String(byUser.user_id));
+    }
+    if (byUser?.id) {
+      participantIds.push(String(byUser.id));
+    }
+  }
+
+  const since = application.created_at
+    ? new Date(new Date(String(application.created_at)).getTime() - 60_000).toISOString()
+    : undefined;
+
+  return { participantIds: [...new Set(participantIds.filter(Boolean))], since };
+}
+
+async function attachMessagesToThread(admin: Admin, messageIds: string[], threadId: string) {
+  if (messageIds.length === 0) {
+    return;
+  }
+  const { error } = await admin.from("messages").update({ booking_id: threadId }).in("id", messageIds);
+  if (error && !/column|foreign key|violates/i.test(error.message)) {
+    console.warn("Chat-Thread konnte nicht nachgetragen werden:", error.message);
+  }
+}
+
 export async function loadMessagesForApplication(
   admin: Admin,
   applicationId: string,
   bookingId?: string | null,
 ) {
   const resolvedBookingId = await resolveBookingIdForApplication(admin, applicationId, bookingId);
-  const ids = [...new Set([applicationId, resolvedBookingId].filter((value): value is string => Boolean(value)))];
+  const threadIds = chatThreadIds(applicationId, resolvedBookingId);
 
   async function query(column: "booking_id" | "application_id", value: string) {
     return admin
@@ -180,45 +273,89 @@ export async function loadMessagesForApplication(
       .limit(200);
   }
 
-  const rows: unknown[] = [];
   const seen = new Set<string>();
+  const messages: ChatMessage[] = [];
 
-  for (const id of ids) {
-    const byBooking = await query("booking_id", id);
-    if (!byBooking.error) {
-      for (const row of byBooking.data ?? []) {
-        const mapped = mapChatMessage(row);
-        if (mapped && !seen.has(mapped.id)) {
-          seen.add(mapped.id);
-          rows.push(row);
-        }
-      }
-      continue;
+  function take(row: unknown, allowUnthreaded: boolean, since?: string) {
+    const mapped = mapChatMessage(row);
+    if (!mapped || seen.has(mapped.id)) {
+      return;
     }
-    if (!isMissingRelation(byBooking.error.message) && !/column/i.test(byBooking.error.message)) {
-      throw new Error(byBooking.error.message);
+    const threaded = messageInThread(mapped, applicationId, resolvedBookingId);
+    const unthreaded = isUnthreadedChatMessage(mapped);
+    if (!threaded && !(allowUnthreaded && unthreaded)) {
+      return;
+    }
+    if (unthreaded && since && new Date(mapped.created_at).getTime() < new Date(since).getTime()) {
+      return;
+    }
+    seen.add(mapped.id);
+    messages.push(mapped);
+  }
+
+  async function collect(column: "booking_id" | "application_id", value: string) {
+    const { data, error } = await query(column, value);
+    if (error) {
+      if (!isMissingRelation(error.message) && !/column/i.test(error.message)) {
+        throw new Error(error.message);
+      }
+      return;
+    }
+    for (const row of data ?? []) {
+      take(row, false);
     }
   }
 
-  if (rows.length === 0) {
-    const byApplication = await query("application_id", applicationId);
-    if (!byApplication.error) {
-      for (const row of byApplication.data ?? []) {
-        const mapped = mapChatMessage(row);
-        if (mapped && !seen.has(mapped.id)) {
-          seen.add(mapped.id);
-          rows.push(row);
-        }
-      }
-    } else if (
-      !isMissingRelation(byApplication.error.message) &&
-      !/column/i.test(byApplication.error.message)
-    ) {
-      throw new Error(byApplication.error.message);
-    }
+  for (const id of threadIds) {
+    await collect("booking_id", id);
+    await collect("application_id", id);
   }
 
-  return rows.map(mapChatMessage).filter((row): row is ChatMessage => row !== null);
+  const { participantIds, since } = await loadConversationParticipantIds(admin, applicationId);
+  if (participantIds.length > 0) {
+    for (const column of ["from_user_id", "sender_id"] as const) {
+      const { data, error } = await admin
+        .from("messages")
+        .select("*")
+        .in(column, participantIds)
+        .order("created_at", { ascending: true })
+        .limit(400);
+      if (error) {
+        continue;
+      }
+      for (const row of data ?? []) {
+        take(row, true, since);
+      }
+    }
+
+    const orphanIds = messages
+      .filter((message) => isUnthreadedChatMessage(message) && participantIds.includes(message.sender_id))
+      .map((message) => message.id);
+    await attachMessagesToThread(admin, orphanIds, applicationId);
+  }
+
+  return mergeChatMessages([], messages);
+}
+
+function mapSavedChatMessage(
+  saved: Record<string, unknown>,
+  input: { applicationId: string; bookingId?: string | null; senderId: string; body: string },
+) {
+  const threadId =
+    firstString(saved, ["booking_id", "application_id"]) || input.applicationId || input.bookingId || "";
+  return (
+    mapChatMessage(saved) ??
+    mapChatMessage({
+      id: String(saved.id ?? crypto.randomUUID()),
+      application_id: input.applicationId,
+      booking_id: threadId || null,
+      sender_id: input.senderId,
+      from_user_id: input.senderId,
+      body: input.body,
+      message: input.body,
+      created_at: String(saved.created_at ?? new Date().toISOString()),
+    })
+  );
 }
 
 export async function insertChatMessage(
@@ -240,58 +377,71 @@ export async function insertChatMessage(
     input.applicationId,
     input.bookingId ?? null,
   );
+  const threadIds = chatThreadIds(input.applicationId, bookingId);
 
-  const attempts: Record<string, unknown>[] = [
+  const attempts: Record<string, unknown>[] = threadIds.flatMap((threadId) => [
+    {
+      booking_id: threadId,
+      from_user_id: input.senderId,
+      sender_id: input.senderId,
+      message: body,
+      body,
+    },
     {
       application_id: input.applicationId,
+      booking_id: threadId,
       sender_id: input.senderId,
       from_user_id: input.senderId,
       body,
       message: body,
     },
-  ];
+  ]);
 
-  if (bookingId) {
-    const threadIds = [...new Set([input.applicationId, bookingId].filter(Boolean))];
-    for (const threadId of threadIds) {
-      attempts.push({
-        booking_id: threadId,
-        from_user_id: input.senderId,
-        message: body,
-      });
+  let lastError = "Nachricht konnte nicht gesendet werden.";
+  for (const row of attempts) {
+    try {
+      const saved = await insertFlexible(admin, "messages", row, ["booking_id"]);
+      const savedId = firstString(asRecord(saved) ?? {}, ["id"]);
+      if (savedId && !firstString(asRecord(saved) ?? {}, ["booking_id", "application_id"])) {
+        await attachMessagesToThread(admin, [savedId], input.applicationId);
+        saved.booking_id = input.applicationId;
+      }
+      const mapped = mapSavedChatMessage(saved, { ...input, body, bookingId });
+      if (mapped) {
+        return {
+          ...mapped,
+          application_id: mapped.application_id || input.applicationId,
+          booking_id: mapped.booking_id || input.applicationId,
+        };
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : lastError;
     }
-    attempts.push({
+  }
+
+  try {
+    const saved = await insertFlexible(admin, "messages", {
       application_id: input.applicationId,
-      booking_id: bookingId,
       sender_id: input.senderId,
       from_user_id: input.senderId,
       body,
       message: body,
     });
-  }
-
-  let lastError = "Nachricht konnte nicht gesendet werden.";
-  for (const row of attempts) {
-    try {
-      const saved = await insertFlexible(admin, "messages", row);
-      const mapped =
-        mapChatMessage(saved) ??
-        mapChatMessage({
-          id: String(saved.id ?? crypto.randomUUID()),
-          application_id: input.applicationId,
-          booking_id: bookingId,
-          sender_id: input.senderId,
-          from_user_id: input.senderId,
-          body,
-          message: body,
-          created_at: String(saved.created_at ?? new Date().toISOString()),
-        });
-      if (mapped) {
-        return mapped;
-      }
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : lastError;
+    const savedId = firstString(asRecord(saved) ?? {}, ["id"]);
+    if (savedId) {
+      await attachMessagesToThread(admin, [savedId], input.applicationId);
+      saved.booking_id = firstString(asRecord(saved) ?? {}, ["booking_id"]) || input.applicationId;
     }
+    const mapped = mapSavedChatMessage(saved, { ...input, body, bookingId });
+    if (mapped) {
+      return {
+        ...mapped,
+        application_id: mapped.application_id || input.applicationId,
+        booking_id: mapped.booking_id || input.applicationId,
+      };
+    }
+  } catch (error) {
+    lastError = error instanceof Error ? error.message : lastError;
   }
 
   throw new Error(lastError);

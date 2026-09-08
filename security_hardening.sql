@@ -112,14 +112,14 @@ drop policy if exists messages_insert_own on public.messages;
 drop policy if exists messages_update_none on public.messages;
 drop policy if exists messages_delete_none on public.messages;
 
--- Lesen: nur wer Absender oder Gegenseite des verknüpften Termins ist.
+-- Lesen: alle Nachrichten der Unterhaltung, nicht nur die selbst gesendeten.
 create policy messages_select_participants
   on public.messages
   for select
   to authenticated
   using (
     sender_id = auth.uid()
-    or public.can_chat_on_application(application_id)
+    or public.is_chat_participant(application_id)
   );
 
 -- Schreiben: nur im eigenen Namen, nur in einen Chat, an dem man beteiligt ist,

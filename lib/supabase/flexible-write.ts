@@ -20,11 +20,13 @@ export function isMissingRelation(message: string) {
 /**
  * Insert that drops unknown columns one by one so the same payload works
  * against live schemas and the repo SQL files.
+ * `keep` columns are never dropped (e.g. the chat thread id).
  */
 export async function insertFlexible(
   admin: { from: (table: string) => { insert: (row: Record<string, unknown>) => any } },
   table: string,
   row: Record<string, unknown>,
+  keep: string[] = [],
 ): Promise<Record<string, unknown>> {
   const payload: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(row)) {
@@ -41,7 +43,7 @@ export async function insertFlexible(
     }
     lastError = error.message;
     const column = missingColumnFromError(error.message);
-    if (!column || !(column in payload)) {
+    if (!column || !(column in payload) || keep.includes(column)) {
       throw new Error(error.message);
     }
     delete payload[column];

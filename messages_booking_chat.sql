@@ -52,6 +52,12 @@ create policy messages_select_booking_participants
     from_user_id = auth.uid()
     or public.is_chat_participant(booking_id)
     or public.can_chat_on_booking(booking_id)
+    or exists (
+      select 1
+      from public.bookings b
+      where b.id = booking_id
+        and public.is_chat_participant(b.application_id)
+    )
   );
 
 drop policy if exists messages_insert_booking_own on public.messages;

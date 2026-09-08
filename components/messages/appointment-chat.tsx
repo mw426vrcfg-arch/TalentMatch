@@ -6,7 +6,7 @@ import { loadChatMessagesAction, sendChatMessageAction } from "@/app/messages/ac
 import { TypingBubble } from "@/components/messages/typing-bubble";
 import { SkeletonChat } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
-import { mapChatMessage, type ChatMessage } from "@/lib/messages/store";
+import { mapChatMessage, mergeChatMessages, messageInThread, type ChatMessage } from "@/lib/messages/store";
 import {
   TYPING_EVENT,
   chatRealtimeChannel,
@@ -69,14 +69,7 @@ export function AppointmentChat({
     if (incoming.sender_id !== currentUserId) {
       setPeerTyping(false);
     }
-    setMessages((current) => {
-      if (current.some((item) => item.id === incoming.id)) {
-        return current;
-      }
-      return [...current, incoming].sort(
-        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-      );
-    });
+    setMessages((current) => mergeChatMessages(current, [incoming]));
   }, [currentUserId]);
 
   const load = useCallback(async (silent = false) => {
@@ -89,20 +82,7 @@ export function AppointmentChat({
     }
     try {
       const rows = await loadChatMessagesAction(safeApplicationId, safeBookingId || null);
-      setMessages((current) => {
-        if (rows.length === 0 && current.length > 0) {
-          return current;
-        }
-        const byId = new Map(rows.map((row) => [row.id, row]));
-        for (const item of current) {
-          if (!byId.has(item.id)) {
-            byId.set(item.id, item);
-          }
-        }
-        return [...byId.values()].sort(
-          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-        );
-      });
+      setMessages((current) => mergeChatMessages(current, rows));
       if (!silent) {
         setError(null);
       }
@@ -139,9 +119,6 @@ export function AppointmentChat({
     }
 
     const supabase = createClient();
-    const filter = safeBookingId
-      ? `booking_id=eq.${safeBookingId}`
-      : `application_id=eq.${safeApplicationId}`;
     const topic = chatRealtimeChannel(safeApplicationId, safeBookingId || null);
 
     const channel = supabase
@@ -156,15 +133,14 @@ export function AppointmentChat({
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter,
         },
         (payload) => {
           const incoming = mapChatMessage(payload.new);
-          if (incoming) {
+          if (incoming && messageInThread(incoming, safeApplicationId, safeBookingId || null)) {
             mergeMessage(incoming);
-          } else {
-            void load(true);
+            return;
           }
+          void load(true);
         },
       )
       .on("broadcast", { event: TYPING_EVENT }, (message) => {
