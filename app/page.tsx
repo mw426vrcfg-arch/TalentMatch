@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/app/app-header";
 import { GuestAuthLinks } from "@/components/i18n/auth-buttons";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { T } from "@/components/i18n/t";
 import { WelcomeSlider } from "@/components/onboarding/welcome-slider";
 import { SiteFooter } from "@/components/site-footer";
@@ -10,7 +11,7 @@ export const dynamic = "force-static";
 
 export default function HomePage() {
   return (
-    <main className="relative">
+    <main suppressHydrationWarning className="relative">
       <WelcomeSlider />
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-24 top-[-12%] h-[28rem] w-[28rem] rounded-full bg-white/70 blur-3xl" />
@@ -19,8 +20,11 @@ export default function HomePage() {
       </div>
 
       <AppHeader>
-        <p className="app-header-brand font-serif text-2xl tracking-tight text-ink transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]">TalentMatch</p>
+        <p className="app-header-brand font-serif text-xl tracking-tight text-ink transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]">
+          TalentMatch
+        </p>
         <div className="flex shrink-0 items-center gap-2">
+          <LanguageSwitcher compact />
           <GuestAuthLinks />
         </div>
       </AppHeader>

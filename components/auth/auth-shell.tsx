@@ -16,7 +16,7 @@ export function AuthShell({ titleKey, subtitleKey, children, footer }: AuthShell
   const t = useT();
 
   return (
-    <main className="min-h-screen lg:grid lg:grid-cols-2">
+    <main suppressHydrationWarning className="min-h-screen lg:grid lg:grid-cols-2">
       <section className="relative hidden overflow-hidden bg-zinc-950 lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,_rgba(113,113,122,0.35),_transparent_38%),radial-gradient(circle_at_82%_78%,_rgba(63,63,70,0.4),_transparent_42%)]" />
         <Link href="/" className="relative font-serif text-3xl text-zinc-50">
@@ -38,7 +38,7 @@ export function AuthShell({ titleKey, subtitleKey, children, footer }: AuthShell
           <h1 className="font-serif text-4xl text-ink">{t(titleKey)}</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-soft">{t(subtitleKey)}</p>
           <div className="mt-8">{children}</div>
-          <p className="mt-8 text-sm text-ink-soft">{footer}</p>
+          <div className="mt-8 text-sm text-ink-soft">{footer}</div>
         </div>
       </section>
     </main>

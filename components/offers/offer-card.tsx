@@ -91,6 +91,7 @@ export function OfferCard({
 
   return (
     <article
+      suppressHydrationWarning
       className={`${offer.is_urgent ? "ui-card-urgent" : "ui-card-hover"} flex h-full flex-col overflow-hidden p-5 sm:p-6`}
     >
       {cover ? (

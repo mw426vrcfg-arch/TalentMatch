@@ -73,9 +73,15 @@ export function HairProfileFields({
   const [chemical, setChemical] = useState(profile?.chemical ?? "");
 
   useEffect(() => {
-    setStructure(profile?.structure ?? "");
-    setLength(profile?.length ?? "");
-    setChemical(profile?.chemical ?? "");
+    if (profile?.structure) {
+      setStructure(profile.structure);
+    }
+    if (profile?.length) {
+      setLength(profile.length);
+    }
+    if (profile?.chemical) {
+      setChemical(profile.chemical);
+    }
   }, [profile?.structure, profile?.length, profile?.chemical]);
 
   return (

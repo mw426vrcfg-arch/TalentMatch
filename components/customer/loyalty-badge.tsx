@@ -3,8 +3,7 @@
 import { useLocale, useT } from "@/components/i18n/i18n-provider";
 import { intlLocale } from "@/lib/i18n/config";
 import type { MessageKey } from "@/lib/i18n/messages";
-import type { MemberLevel } from "@/lib/loyalty/levels";
-import { loyaltyProgress } from "@/lib/loyalty/progress";
+import { loyaltyProgress, type MemberLevel } from "@/lib/loyalty/levels";
 
 function loyaltyLevelKey(level: MemberLevel | string): MessageKey {
   if (level === "Platin") {

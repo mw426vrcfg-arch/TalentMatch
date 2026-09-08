@@ -54,7 +54,7 @@ export async function BrowseOffers({
   }
 
   return (
-    <>
+    <div suppressHydrationWarning>
       <div className="max-w-2xl">
         <p className="ui-kicker">
           <T k="browse.discover" />
@@ -76,6 +76,6 @@ export async function BrowseOffers({
         matchIds={matchIds}
         signedIn={Boolean(userId)}
       />
-    </>
+    </div>
   );
 }

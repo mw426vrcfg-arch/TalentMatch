@@ -18,18 +18,32 @@ import {
   uploadPortfolioImage,
 } from "@/lib/customer/portfolio";
 import { normalizeHairValue } from "@/lib/hair/criteria";
+import { isLocale } from "@/lib/i18n/config";
 import { normalizeThickness } from "@/lib/customer/treatment-pass";
 import { loadCustomerProfile, saveCustomerProfile } from "@/lib/customer/profile-store";
-import { readLine, readText, sanitizeLine, TEXT_LIMITS } from "@/lib/security/sanitize";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { asGenderOrNull } from "@/lib/profile/gender";
+import { persistAuthProfileFields } from "@/lib/profile/persist-auth-fields";
+import { withProfileWriter } from "@/lib/profile/with-writer";
+import { mirrorToProfilesTable } from "@/lib/profile/write-row";
+import { readLine, readText, sanitizeLine, sanitizePhone, TEXT_LIMITS } from "@/lib/security/sanitize";
+import { tryCreateAdminClient, createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export type CustomerProfileFormState = {
   error?: string;
+  saved?: boolean;
 };
 
-// Alle Formularwerte laufen durch den Sanitizer, bevor sie Supabase erreichen.
-function readString(formData: FormData, key: string) {
-  return readLine(formData, key, TEXT_LIMITS.shortNote);
+function readHairOrKeep(
+  formData: FormData,
+  key: "hair_structure" | "hair_length" | "hair_chemical",
+  kind: "structure" | "length" | "chemical",
+  current: string | null | undefined,
+) {
+  if (!formData.has(key)) {
+    return current ?? null;
+  }
+  return normalizeHairValue(kind, readLine(formData, key, TEXT_LIMITS.shortNote));
 }
 
 export async function updateCustomerProfileAction(
@@ -39,15 +53,37 @@ export async function updateCustomerProfileAction(
   const { user } = await requireCustomer();
   const fullName = readLine(formData, "full_name", TEXT_LIMITS.name);
   const bio = readText(formData, "bio", TEXT_LIMITS.bio);
+  const phone = sanitizePhone(formData.get("phone"));
+  const gender = formData.has("gender")
+    ? asGenderOrNull(formData.get("gender"))
+    : undefined;
+  const languageRaw = readLine(formData, "preferred_language", 8);
+  const preferredLanguage = isLocale(languageRaw) ? languageRaw : null;
   const avatar = formData.get("avatar");
 
   if (!fullName) {
     return { error: "Bitte deinen vollen Namen angeben." };
   }
 
-  const admin = createAdminClient();
-  const loaded = await loadCustomerProfile(admin, user.id);
-  let avatarUrl = loaded.profile?.avatar_url ?? null;
+  const admin = tryCreateAdminClient();
+  let avatarUrl: string | null = null;
+  let currentHair = { structure: null as string | null, length: null as string | null, chemical: null as string | null };
+  let currentPass = {
+    last_bleaching: null as string | null,
+    chemical_treatments: null as string | null,
+    hair_thickness: null as string | null,
+  };
+
+  try {
+    const loaded = await withProfileWriter((db) =>
+      loadCustomerProfile(db, user.id, user.user_metadata as Record<string, unknown>),
+    );
+    avatarUrl = loaded.profile?.avatar_url ?? null;
+    currentHair = loaded.profile?.hair ?? currentHair;
+    currentPass = loaded.profile?.treatment_pass ?? currentPass;
+  } catch {
+    // Speichern legt die Zeile bei Bedarf neu an.
+  }
 
   if (avatar instanceof File && avatar.size > 0) {
     if (!isImageFile(avatar)) {
@@ -55,6 +91,9 @@ export async function updateCustomerProfileAction(
     }
     if (avatar.size > MAX_AVATAR_BYTES) {
       return { error: "Das Profilbild darf höchstens 2 MB groß sein." };
+    }
+    if (!admin) {
+      return { error: "Bild-Upload ist gerade nicht verfügbar." };
     }
 
     try {
@@ -69,31 +108,61 @@ export async function updateCustomerProfileAction(
     }
   }
 
-  let droppedColumns: string[] = [];
+  const hair = {
+    structure: readHairOrKeep(formData, "hair_structure", "structure", currentHair.structure),
+    length: readHairOrKeep(formData, "hair_length", "length", currentHair.length),
+    chemical: readHairOrKeep(formData, "hair_chemical", "chemical", currentHair.chemical),
+  };
 
   try {
-    await admin.from("users").update({ full_name: fullName }).eq("id", user.id);
+    await withProfileWriter((db) =>
+      saveCustomerProfile(db, {
+        userId: user.id,
+        full_name: fullName,
+        bio: bio || null,
+        phone: phone || null,
+        avatar_url: avatarUrl,
+        gender,
+        preferred_language: preferredLanguage,
+        hair,
+        treatment_pass: {
+          last_bleaching: formData.has("last_bleaching")
+            ? readLine(formData, "last_bleaching", TEXT_LIMITS.shortNote) || null
+            : currentPass.last_bleaching,
+          chemical_treatments: formData.has("chemical_treatments")
+            ? readText(formData, "chemical_treatments", TEXT_LIMITS.shortNote) || null
+            : currentPass.chemical_treatments,
+          hair_thickness: formData.has("hair_thickness")
+            ? normalizeThickness(readLine(formData, "hair_thickness", TEXT_LIMITS.shortNote))
+            : currentPass.hair_thickness,
+        },
+      }),
+    );
 
-    const saved = await saveCustomerProfile(admin, {
-      userId: user.id,
+    await persistAuthProfileFields({
       full_name: fullName,
       bio: bio || null,
-      avatar_url: avatarUrl,
-      hair: {
-        structure: normalizeHairValue("structure", readString(formData, "hair_structure")),
-        length: normalizeHairValue("length", readString(formData, "hair_length")),
-        chemical: normalizeHairValue("chemical", readString(formData, "hair_chemical")),
-      },
-      treatment_pass: {
-        last_bleaching: readString(formData, "last_bleaching") || null,
-        chemical_treatments: readString(formData, "chemical_treatments") || null,
-        hair_thickness: normalizeThickness(readString(formData, "hair_thickness")),
-      },
+      phone: phone || null,
+      gender: gender ?? null,
+      preferred_language: preferredLanguage,
+      hair_structure: hair.structure,
+      hair_length: hair.length,
+      hair_chemical: hair.chemical,
     });
 
-    droppedColumns = saved.droppedColumns;
+    const supabase = await createClient();
+    await mirrorToProfilesTable(supabase, user.id, {
+      full_name: fullName,
+      bio: bio || null,
+      phone: phone || null,
+      gender: gender ?? null,
+      preferred_language: preferredLanguage,
+      hair_structure: hair.structure,
+      hair_length: hair.length,
+      hair_chemical: hair.chemical,
+    });
 
-    if (avatarUrl) {
+    if (avatarUrl && admin) {
       const { error: pictureError } = await admin
         .from("customer_profiles")
         .update({ profile_picture_url: avatarUrl })
@@ -110,10 +179,10 @@ export async function updateCustomerProfileAction(
 
   revalidatePath("/dashboard/profile");
   revalidatePath("/dashboard");
+  revalidatePath("/offers");
   revalidatePath("/business/dashboard");
 
-  const missing = droppedColumns.length > 0 ? `&missing=${encodeURIComponent(droppedColumns.join(","))}` : "";
-  redirect(`/dashboard/profile?saved=1${missing}`);
+  return { saved: true };
 }
 
 export type HairPortfolioFormState = {

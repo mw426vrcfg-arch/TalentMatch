@@ -19,7 +19,7 @@ export function LegalPage({
   const t = useT();
   return (
     <>
-    <main className="mx-auto w-full max-w-3xl px-6 py-16 sm:px-8 sm:py-24">
+    <main suppressHydrationWarning className="mx-auto w-full max-w-3xl px-6 py-16 sm:px-8 sm:py-24">
       <Link href="/" className="ui-link">
         ← {t("settings.back")}
       </Link>

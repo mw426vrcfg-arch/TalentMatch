@@ -2,7 +2,7 @@ import { T } from "@/components/i18n/t";
 
 export default function OfferNotFound() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-cream px-6">
+    <main suppressHydrationWarning className="flex min-h-screen items-center justify-center bg-cream px-6">
       <div className="max-w-md text-center">
         <p className="ui-kicker">TalentMatch</p>
         <h1 className="mt-3 font-serif text-4xl text-ink">

@@ -11,7 +11,9 @@ export function TreatmentPassFields({ pass }: { pass?: TreatmentPass | null }) {
   const [thickness, setThickness] = useState(pass?.hair_thickness ?? "");
 
   useEffect(() => {
-    setThickness(pass?.hair_thickness ?? "");
+    if (pass?.hair_thickness) {
+      setThickness(pass.hair_thickness);
+    }
   }, [pass?.hair_thickness]);
 
   return (

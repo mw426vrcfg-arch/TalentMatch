@@ -31,7 +31,7 @@ export default async function OAuthRolePage() {
   const provider = String(user.app_metadata?.provider ?? "");
 
   return (
-    <main className="relative min-h-screen bg-zinc-950">
+    <main suppressHydrationWarning className="relative min-h-screen bg-zinc-950">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,_rgba(113,113,122,0.35),_transparent_38%),radial-gradient(circle_at_82%_78%,_rgba(63,63,70,0.4),_transparent_42%)]" />
       <OAuthRoleDialog
         initialRole={isOAuthRole(pendingRole) ? pendingRole : "customer"}

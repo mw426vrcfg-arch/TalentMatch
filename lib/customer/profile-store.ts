@@ -1,14 +1,17 @@
 import { type HairProfile, readHairProfile } from "@/lib/hair/criteria";
+import { isLocale, type Locale } from "@/lib/i18n/config";
 import { memberLevelFromPoints, normalizeMemberLevel } from "@/lib/loyalty/levels";
 import { portfolioFromProfileRow } from "@/lib/customer/portfolio";
+import { asGenderOrNull } from "@/lib/profile/gender";
+import { type ProfileDb, mirrorToProfilesTable } from "@/lib/profile/write-row";
 import { normalizeThickness, readTreatmentPass, type TreatmentPass } from "@/lib/customer/treatment-pass";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export type CustomerProfile = {
   id: string | null;
   user_id: string;
   full_name: string;
   bio: string | null;
+  phone: string | null;
   avatar_url: string | null;
   hair_portfolio: string[];
   hair: HairProfile;
@@ -16,14 +19,14 @@ export type CustomerProfile = {
   beauty_points: number;
   member_level: string;
   gender: "female" | "male" | "diverse" | null;
+  preferred_language: Locale | null;
   in_app_push: boolean;
 };
-
-type Admin = ReturnType<typeof createAdminClient>;
 
 const FIELD_ALIASES = {
   full_name: ["full_name", "name", "display_name"],
   bio: ["bio", "description", "about"],
+  phone: ["phone", "telephone", "tel"],
   avatar_url: [
     "profile_picture_url",
     "avatar_url",
@@ -42,6 +45,23 @@ const HAIR_COLUMN_ALIASES = {
 
 const PORTFOLIO_WRITE_COLUMNS = ["hair_portfolio", "portfolio_images", "gallery_urls", "portfolio_urls"];
 
+const NEW_ROW_COLUMNS = [
+  "id",
+  "user_id",
+  "full_name",
+  "bio",
+  "phone",
+  "profile_picture_url",
+  "hair_structure",
+  "hair_length",
+  "hair_chemical",
+  "gender",
+  "preferred_language",
+  "last_bleaching",
+  "chemical_treatments",
+  "hair_thickness",
+];
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -49,16 +69,23 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+function filledText(value: unknown) {
+  if (value == null) {
+    return null;
+  }
+  const text = String(value).trim();
+  if (!text || text === "null" || text === "undefined") {
+    return null;
+  }
+  return text;
+}
+
 function firstString(row: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     if (!(key in row)) {
       continue;
     }
-    const value = row[key];
-    if (value == null) {
-      continue;
-    }
-    const text = String(value).trim();
+    const text = filledText(row[key]);
     if (text) {
       return text;
     }
@@ -73,15 +100,14 @@ export function mapCustomerProfileRow(row: unknown, userId: string): CustomerPro
   }
 
   const points = Math.max(0, Number(data.beauty_points ?? data.points ?? 0) || 0);
-  const genderRaw = data.gender != null ? String(data.gender) : "";
-  const gender =
-    genderRaw === "female" || genderRaw === "male" || genderRaw === "diverse" ? genderRaw : null;
+  const languageRaw = firstString(data, ["preferred_language", "locale", "language"]);
 
   return {
     id: data.id != null ? String(data.id) : null,
     user_id: String(data.user_id ?? userId),
     full_name: firstString(data, FIELD_ALIASES.full_name) ?? "",
     bio: firstString(data, FIELD_ALIASES.bio),
+    phone: firstString(data, FIELD_ALIASES.phone),
     avatar_url: firstString(data, FIELD_ALIASES.avatar_url),
     hair_portfolio: portfolioFromProfileRow(data),
     hair: readHairProfile({
@@ -94,41 +120,121 @@ export function mapCustomerProfileRow(row: unknown, userId: string): CustomerPro
     member_level: normalizeMemberLevel(
       data.member_level != null ? String(data.member_level) : memberLevelFromPoints(points),
     ),
-    gender,
+    gender: asGenderOrNull(data.gender),
+    preferred_language: isLocale(languageRaw) ? languageRaw : null,
     in_app_push: data.in_app_push == null ? true : Boolean(data.in_app_push),
   };
 }
 
-export async function loadCustomerProfile(admin: Admin, userId: string) {
-  const byUserId = await admin
-    .from("customer_profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
+function filled(value: string | null | undefined) {
+  return Boolean(filledText(value));
+}
 
-  if (byUserId.error && !/does not exist|schema cache/i.test(byUserId.error.message)) {
-    throw new Error(byUserId.error.message);
+function mergeCustomerProfiles(
+  primary: CustomerProfile | null,
+  extra: CustomerProfile | null,
+): CustomerProfile | null {
+  if (!primary) {
+    return extra;
+  }
+  if (!extra) {
+    return primary;
+  }
+  return {
+    ...primary,
+    full_name: filled(primary.full_name) ? primary.full_name : extra.full_name,
+    bio: filled(primary.bio) ? primary.bio : extra.bio,
+    phone: filled(primary.phone) ? primary.phone : extra.phone,
+    avatar_url: filled(primary.avatar_url) ? primary.avatar_url : extra.avatar_url,
+    hair: {
+      structure: primary.hair.structure ?? extra.hair.structure,
+      length: primary.hair.length ?? extra.hair.length,
+      chemical: primary.hair.chemical ?? extra.hair.chemical,
+    },
+    treatment_pass: {
+      last_bleaching: primary.treatment_pass.last_bleaching ?? extra.treatment_pass.last_bleaching,
+      chemical_treatments:
+        primary.treatment_pass.chemical_treatments ?? extra.treatment_pass.chemical_treatments,
+      hair_thickness: primary.treatment_pass.hair_thickness ?? extra.treatment_pass.hair_thickness,
+    },
+    gender: primary.gender ?? extra.gender,
+    preferred_language: primary.preferred_language ?? extra.preferred_language,
+  };
+}
+
+async function loadTableRow(db: ProfileDb, table: string, userId: string) {
+  const byUser = await db.from(table).select("*").eq("user_id", userId).maybeSingle();
+  if (!byUser.error && byUser.data) {
+    return asRecord(byUser.data);
+  }
+  if (byUser.error && !/does not exist|schema cache|could not find the table/i.test(byUser.error.message)) {
+    throw new Error(byUser.error.message);
   }
 
-  const row = byUserId.data
-    ? byUserId.data
-    : (
-        await admin.from("customer_profiles").select("*").eq("id", userId).maybeSingle()
-      ).data;
+  const byId = await db.from(table).select("*").eq("id", userId).maybeSingle();
+  if (byId.error && !/does not exist|schema cache|could not find the table/i.test(byId.error.message)) {
+    throw new Error(byId.error.message);
+  }
+  return asRecord(byId.data);
+}
 
-  if (byUserId.error && !row) {
-    if (/does not exist|schema cache/i.test(byUserId.error.message)) {
-      return { profile: null as CustomerProfile | null, columns: [] as string[], row: null as Record<string, unknown> | null };
+export async function loadCustomerProfile(
+  db: ProfileDb,
+  userId: string,
+  authMetadata?: Record<string, unknown> | null,
+) {
+  let customerRow: Record<string, unknown> | null = null;
+  try {
+    customerRow = await loadTableRow(db, "customer_profiles", userId);
+  } catch (error) {
+    if (!(error instanceof Error) || !/does not exist|schema cache/i.test(error.message)) {
+      throw error;
     }
-    throw new Error(byUserId.error.message);
   }
+
+  let genericRow: Record<string, unknown> | null = null;
+  try {
+    genericRow = await loadTableRow(db, "profiles", userId);
+  } catch {
+    genericRow = null;
+  }
+
+  let mapped = mergeCustomerProfiles(
+    mapCustomerProfileRow(customerRow, userId),
+    mapCustomerProfileRow(genericRow, userId),
+  );
+
+  const { data: userRow } = await db.from("users").select("full_name, phone").eq("id", userId).maybeSingle();
+  const userPhone = userRow ? firstString(asRecord(userRow) ?? {}, FIELD_ALIASES.phone) : null;
+  const userName = userRow ? firstString(asRecord(userRow) ?? {}, FIELD_ALIASES.full_name) : "";
+
+  if (userName || userPhone) {
+    mapped = mergeCustomerProfiles(
+      mapped,
+      mapCustomerProfileRow(
+        { id: userId, user_id: userId, full_name: userName, phone: userPhone },
+        userId,
+      ),
+    );
+  }
+
+  if (authMetadata) {
+    mapped = mergeCustomerProfiles(
+      mapped,
+      mapCustomerProfileRow({ ...authMetadata, id: userId, user_id: userId }, userId),
+    );
+  }
+
+  const columns = customerRow
+    ? Object.keys(customerRow)
+    : genericRow
+      ? Object.keys(genericRow)
+      : [];
 
   return {
-    profile: mapCustomerProfileRow(row, userId),
-    columns: row
-      ? Object.keys(row)
-      : ["id", "user_id", "full_name", "bio", "profile_picture_url", "hair_portfolio", "portfolio_images", "hair_structure", "hair_length", "hair_chemical", "chemical_treatment"],
-    row: asRecord(row),
+    profile: mapped,
+    columns,
+    row: customerRow ?? genericRow,
   };
 }
 
@@ -138,10 +244,13 @@ function payloadForColumns(
     user_id: string;
     full_name: string;
     bio: string | null;
+    phone: string | null;
     avatar_url: string | null;
     hair_portfolio?: string[];
     hair?: HairProfile;
     treatment_pass?: TreatmentPass;
+    gender?: "female" | "male" | "diverse" | null;
+    preferred_language?: Locale | null;
   },
 ) {
   const columnSet = new Set(columns);
@@ -155,7 +264,7 @@ function payloadForColumns(
   if (columnSet.has("profile_picture_url")) {
     payload.profile_picture_url = values.avatar_url;
   }
-  if (values.hair_portfolio) {
+  if (values.hair_portfolio !== undefined) {
     for (const column of PORTFOLIO_WRITE_COLUMNS) {
       if (columnSet.has(column)) {
         payload[column] = values.hair_portfolio;
@@ -185,6 +294,17 @@ function payloadForColumns(
     }
     if (columnSet.has("hair_thickness")) {
       payload.hair_thickness = normalizeThickness(values.treatment_pass.hair_thickness);
+    }
+  }
+  if (values.gender !== undefined && columnSet.has("gender")) {
+    payload.gender = values.gender;
+  }
+  if (values.preferred_language !== undefined) {
+    for (const column of ["preferred_language", "locale", "language"]) {
+      if (columnSet.has(column)) {
+        payload[column] = values.preferred_language;
+        break;
+      }
     }
   }
 
@@ -230,31 +350,102 @@ function syncInsertPayload(
   insertPayload.user_id = userId;
 }
 
+async function finishCustomerSave(
+  db: ProfileDb,
+  userId: string,
+  row: unknown,
+  droppedColumns: string[],
+  input: {
+    full_name: string;
+    phone: string | null;
+    bio: string | null;
+    gender?: "female" | "male" | "diverse" | null;
+    preferred_language?: Locale | null;
+    hair?: HairProfile;
+  },
+) {
+  const mapped = mapCustomerProfileRow(row, userId);
+  const userUpdate = { full_name: input.full_name, phone: input.phone };
+  const userResult = await db.from("users").update(userUpdate).eq("id", userId);
+  if (userResult.error) {
+    if (isMissingColumnError(userResult.error.message) && /phone/i.test(userResult.error.message)) {
+      const retry = await db.from("users").update({ full_name: input.full_name }).eq("id", userId);
+      if (retry.error && !isMissingColumnError(retry.error.message)) {
+        throw new Error(retry.error.message);
+      }
+    } else {
+      throw new Error(userResult.error.message);
+    }
+  }
+  await mirrorToProfilesTable(db, userId, {
+    full_name: input.full_name,
+    bio: input.bio,
+    phone: input.phone,
+    gender: input.gender ?? mapped?.gender ?? null,
+    preferred_language: input.preferred_language ?? mapped?.preferred_language ?? null,
+    hair_structure: input.hair?.structure ?? mapped?.hair.structure ?? null,
+    hair_length: input.hair?.length ?? mapped?.hair.length ?? null,
+    hair_chemical: input.hair?.chemical ?? mapped?.hair.chemical ?? null,
+  });
+  return {
+    profile: mergeCustomerProfiles(mapped, {
+      id: mapped?.id ?? userId,
+      user_id: userId,
+      full_name: input.full_name,
+      bio: input.bio,
+      phone: input.phone,
+      avatar_url: mapped?.avatar_url ?? null,
+      hair_portfolio: mapped?.hair_portfolio ?? [],
+      hair: input.hair ?? mapped?.hair ?? { structure: null, length: null, chemical: null },
+      treatment_pass: mapped?.treatment_pass ?? {
+        last_bleaching: null,
+        chemical_treatments: null,
+        hair_thickness: null,
+      },
+      beauty_points: mapped?.beauty_points ?? 0,
+      member_level: mapped?.member_level ?? "Bronze",
+      gender: input.gender !== undefined ? input.gender : mapped?.gender ?? null,
+      preferred_language:
+        input.preferred_language !== undefined
+          ? input.preferred_language
+          : mapped?.preferred_language ?? null,
+      in_app_push: mapped?.in_app_push ?? true,
+    }),
+    droppedColumns,
+  };
+}
+
 export async function saveCustomerProfile(
-  admin: Admin,
+  db: ProfileDb,
   input: {
     userId: string;
     full_name: string;
     bio: string | null;
+    phone: string | null;
     avatar_url: string | null;
     hair_portfolio?: string[];
     hair?: HairProfile;
     treatment_pass?: TreatmentPass;
+    gender?: "female" | "male" | "diverse" | null;
+    preferred_language?: Locale | null;
   },
 ) {
-  const loaded = await loadCustomerProfile(admin, input.userId);
-  const columns =
-    loaded.columns.length > 0
-      ? loaded.columns
-      : ["id", "user_id", "full_name", "bio", "profile_picture_url", "hair_portfolio", "portfolio_images", "hair_structure", "hair_length", "hair_chemical", "chemical_treatment"];
+  const loaded = await loadCustomerProfile(db, input.userId);
+  const columns = loaded.columns.length > 0 ? loaded.columns : NEW_ROW_COLUMNS;
   const payload = payloadForColumns(columns, {
     user_id: input.userId,
     full_name: input.full_name,
     bio: input.bio,
+    phone: input.phone,
     avatar_url: input.avatar_url,
-    hair_portfolio: input.hair_portfolio ?? loaded.profile?.hair_portfolio,
+    hair_portfolio: input.hair_portfolio,
     hair: input.hair ?? loaded.profile?.hair,
     treatment_pass: input.treatment_pass ?? loaded.profile?.treatment_pass,
+    gender: input.gender !== undefined ? input.gender : loaded.profile?.gender,
+    preferred_language:
+      input.preferred_language !== undefined
+        ? input.preferred_language
+        : loaded.profile?.preferred_language,
   });
 
   const insertPayload = {
@@ -263,42 +454,60 @@ export async function saveCustomerProfile(
     user_id: input.userId,
   };
 
-  // Fehlende Spalten werden einzeln von Postgres gemeldet, deshalb ein Versuch
-  // pro Spalte. Die Namen wandern nach droppedColumns, damit der Aufrufer
-  // sichtbar machen kann, welche Daten nicht gespeichert wurden.
   const droppedColumns: string[] = [];
+  const finish = (row: unknown) =>
+    finishCustomerSave(db, input.userId, row, droppedColumns, {
+      full_name: input.full_name,
+      phone: input.phone,
+      bio: input.bio,
+      gender: input.gender,
+      preferred_language: input.preferred_language,
+      hair: input.hair,
+    });
 
   for (let attempt = 0; attempt < 16; attempt += 1) {
     if (loaded.profile) {
-      let query = admin.from("customer_profiles").update(insertPayload);
+      let query = db.from("customer_profiles").update(insertPayload);
       query = loaded.profile.id
         ? query.eq("id", loaded.profile.id)
         : query.eq("user_id", input.userId);
 
       const { data, error } = await query.select("*").maybeSingle();
 
-      if (!error) {
-        return { profile: mapCustomerProfileRow(data, input.userId), droppedColumns };
+      if (!error && data) {
+        return finish(data);
       }
-      const removed = isMissingColumnError(error.message)
-        ? stripMissingColumn(payload, error.message)
-        : null;
-      if (removed) {
-        droppedColumns.push(removed);
-        syncInsertPayload(insertPayload, payload, input.userId);
-        continue;
+      if (!error && !data) {
+        const byUser = await db
+          .from("customer_profiles")
+          .update(insertPayload)
+          .eq("user_id", input.userId)
+          .select("*")
+          .maybeSingle();
+        if (!byUser.error && byUser.data) {
+          return finish(byUser.data);
+        }
+      } else if (error) {
+        const removed = isMissingColumnError(error.message)
+          ? stripMissingColumn(payload, error.message)
+          : null;
+        if (removed) {
+          droppedColumns.push(removed);
+          syncInsertPayload(insertPayload, payload, input.userId);
+          continue;
+        }
+        throw new Error(error.message);
       }
-      throw new Error(error.message);
     }
 
-    const { data, error } = await admin
+    const { data, error } = await db
       .from("customer_profiles")
       .insert(insertPayload)
       .select("*")
       .single();
 
     if (!error) {
-      return { profile: mapCustomerProfileRow(data, input.userId), droppedColumns };
+      return finish(data);
     }
     const removed = isMissingColumnError(error.message)
       ? stripMissingColumn(payload, error.message)
@@ -309,14 +518,14 @@ export async function saveCustomerProfile(
       continue;
     }
     if (/duplicate key|unique constraint/i.test(error.message)) {
-      const { data: updated, error: updateError } = await admin
+      const { data: updated, error: updateError } = await db
         .from("customer_profiles")
         .update(insertPayload)
         .eq("id", input.userId)
         .select("*")
         .maybeSingle();
-      if (!updateError) {
-        return { profile: mapCustomerProfileRow(updated, input.userId), droppedColumns };
+      if (!updateError && updated) {
+        return finish(updated);
       }
     }
     throw new Error(error.message);

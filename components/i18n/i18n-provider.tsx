@@ -88,12 +88,15 @@ export function I18nProvider({
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
+const I18N_FALLBACK: I18nContextValue = {
+  locale: DEFAULT_LOCALE,
+  setLocale: () => {},
+  t: (key, values) => translate(DEFAULT_LOCALE, key, values),
+  localize: (text) => (text ? localizeText(DEFAULT_LOCALE, text) : ""),
+};
+
 export function useI18n() {
-  const context = useContext(I18nContext);
-  if (!context) {
-    throw new Error("useI18n must be used within I18nProvider");
-  }
-  return context;
+  return useContext(I18nContext) ?? I18N_FALLBACK;
 }
 
 export function useT() {

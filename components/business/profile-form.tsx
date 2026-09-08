@@ -1,14 +1,16 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  loadMyBusinessProfileAction,
   updateBusinessProfileAction,
   type ProfileFormState,
 } from "@/app/business/profile/actions";
 import { type BusinessProfile } from "@/lib/business/profile-store";
 import { resolveLogoUrl } from "@/lib/business/images";
-import { useLocalize, useT } from "@/components/i18n/i18n-provider";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { useLocalize, useLocale, useT } from "@/components/i18n/i18n-provider";
+import { formText } from "@/lib/profile/form-text";
 import { type GenderValue } from "@/lib/profile/gender";
 import { BusyLabel } from "@/components/ui/busy-label";
 import { AppImage } from "@/components/ui/app-image";
@@ -32,24 +34,25 @@ type FormValues = {
 
 function toFormValues(profile: BusinessProfile | null): FormValues {
   return {
-    business_name: profile?.business_name ?? "",
-    location: profile?.location ?? "",
-    address: profile?.address ?? "",
-    phone: profile?.phone ?? "",
-    description: profile?.description ?? "",
+    business_name: formText(profile?.business_name),
+    location: formText(profile?.location),
+    address: formText(profile?.address),
+    phone: formText(profile?.phone),
+    description: formText(profile?.description),
     gender: profile?.contact_gender ?? "",
   };
 }
 
 export function BusinessProfileForm({
-  userId,
   profile,
 }: {
-  userId: string;
+  userId?: string;
   profile: BusinessProfile | null;
 }) {
   const t = useT();
+  const locale = useLocale();
   const localize = useLocalize();
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(
     updateBusinessProfileAction,
     initialState,
@@ -58,32 +61,27 @@ export function BusinessProfileForm({
   const [logoUrl, setLogoUrl] = useState(() => resolveLogoUrl(profile?.logo_url));
 
   useEffect(() => {
-    setValues(toFormValues(profile));
-    setLogoUrl(resolveLogoUrl(profile?.logo_url));
+    setValues((current) => {
+      const next = toFormValues(profile);
+      return {
+        business_name: next.business_name || current.business_name,
+        location: next.location || current.location,
+        address: next.address || current.address,
+        phone: next.phone || current.phone,
+        description: next.description || current.description,
+        gender: next.gender || current.gender,
+      };
+    });
+    if (profile?.logo_url) {
+      setLogoUrl(resolveLogoUrl(profile.logo_url));
+    }
   }, [profile]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadSavedProfile() {
-      const loaded = await loadMyBusinessProfileAction();
-      if (cancelled || !loaded) {
-        return;
-      }
-      const next = toFormValues(loaded);
-      setValues((current) => ({
-        ...next,
-        phone: next.phone || current.phone,
-        gender: next.gender || current.gender,
-      }));
-      setLogoUrl((current) => resolveLogoUrl(loaded.logo_url) ?? current);
+    if (state.saved) {
+      router.refresh();
     }
-
-    void loadSavedProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
+  }, [state.saved, router]);
 
   function updateField(field: keyof FormValues) {
     return (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -93,11 +91,12 @@ export function BusinessProfileForm({
 
   return (
     <form action={formAction} className="space-y-5">
-      {state.error && (
+      {state.saved ? <p className="ui-alert-ok">{t("profile.saved")}</p> : null}
+      {state.error && !state.saved ? (
         <p className="ui-alert-error">
           {localize(state.error)}
         </p>
-      )}
+      ) : null}
 
       <div className="flex items-center gap-4">
         <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/70 shadow-[0_8px_24px_rgba(15,15,20,0.05)] backdrop-blur-md">
@@ -168,7 +167,7 @@ export function BusinessProfileForm({
           name="phone"
           type="tel"
           autoComplete="tel"
-          value={values.phone || ""}
+          value={values.phone}
           onChange={updateField("phone")}
           placeholder={t("profile.phonePlaceholder")}
           className="ui-input"
@@ -207,11 +206,19 @@ export function BusinessProfileForm({
         </div>
       </div>
 
+      <div>
+        <p className="mb-1.5 text-sm text-ink-soft">{t("settings.language")}</p>
+        <input type="hidden" name="preferred_language" value={locale} />
+        <div className="max-w-[220px]">
+          <LanguageSwitcher compact />
+        </div>
+      </div>
+
       <button
         type="submit"
         disabled={pending}
         aria-busy={pending}
-        className="ui-btn-primary w-full sm:w-auto"
+        className="ui-btn-primary relative z-50 w-full sm:w-auto"
       >
         {pending ? <BusyLabel>{t("actions.saving")}</BusyLabel> : t("actions.saveProfile")}
       </button>

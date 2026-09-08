@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireBusiness } from "@/lib/auth/require-business";
 import {
   isImageFile,
@@ -11,17 +10,27 @@ import {
 } from "@/lib/business/images";
 import { loadBusinessProfileByUserId, saveBusinessProfile } from "@/lib/business/profile-store";
 import { asGenderOrNull } from "@/lib/profile/gender";
+import { persistAuthProfileFields } from "@/lib/profile/persist-auth-fields";
+import { withProfileWriter } from "@/lib/profile/with-writer";
+import { mirrorToProfilesTable } from "@/lib/profile/write-row";
+import { isLocale } from "@/lib/i18n/config";
 import { readLine, readText, sanitizePhone, TEXT_LIMITS } from "@/lib/security/sanitize";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, tryCreateAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export type ProfileFormState = {
   error?: string;
+  saved?: boolean;
 };
 
 export async function loadMyBusinessProfileAction() {
   const { user } = await requireBusiness();
   const admin = createAdminClient();
-  const { profile } = await loadBusinessProfileByUserId(admin, user.id);
+  const { profile } = await loadBusinessProfileByUserId(
+    admin,
+    user.id,
+    user.user_metadata as Record<string, unknown>,
+  );
   if (!profile) {
     return null;
   }
@@ -44,6 +53,8 @@ export async function updateBusinessProfileAction(
     readLine(formData, "street", TEXT_LIMITS.address);
   const phone = sanitizePhone(formData.get("phone"));
   const gender = asGenderOrNull(formData.get("gender"));
+  const languageRaw = readLine(formData, "preferred_language", 8);
+  const preferredLanguage = isLocale(languageRaw) ? languageRaw : null;
   const description = readText(formData, "description", TEXT_LIMITS.description);
   const logo = formData.get("logo");
 
@@ -52,7 +63,7 @@ export async function updateBusinessProfileAction(
   }
 
   let logoUrl = business?.logo_url ?? null;
-  const admin = createAdminClient();
+  const admin = tryCreateAdminClient();
   let profileId = business?.id;
 
   if (logo instanceof File && logo.size > 0) {
@@ -65,16 +76,19 @@ export async function updateBusinessProfileAction(
 
     if (!profileId) {
       try {
-        const created = await saveBusinessProfile(admin, {
-          userId: user.id,
-          business_name: businessName,
-          location,
-          description: description || null,
-          address: address || null,
-          phone: phone || null,
-          logo_url: null,
-          gender,
-        });
+        const created = await withProfileWriter((db) =>
+          saveBusinessProfile(db, {
+            userId: user.id,
+            business_name: businessName,
+            location,
+            description: description || null,
+            address: address || null,
+            phone: phone || null,
+            logo_url: null,
+            gender,
+            preferred_language: preferredLanguage,
+          }),
+        );
         profileId = created?.id;
       } catch (error) {
         return {
@@ -85,6 +99,10 @@ export async function updateBusinessProfileAction(
 
     if (!profileId) {
       return { error: "Kein Salonprofil gefunden." };
+    }
+
+    if (!admin) {
+      return { error: "Logo-Upload ist gerade nicht verfügbar." };
     }
 
     try {
@@ -100,19 +118,43 @@ export async function updateBusinessProfileAction(
   }
 
   try {
-    await saveBusinessProfile(admin, {
-      userId: user.id,
-      profileId,
+    await withProfileWriter((db) =>
+      saveBusinessProfile(db, {
+        userId: user.id,
+        profileId,
+        business_name: businessName,
+        location,
+        description: description || null,
+        address: address || null,
+        phone: phone || null,
+        logo_url: logoUrl,
+        gender,
+        preferred_language: preferredLanguage,
+      }),
+    );
+
+    await persistAuthProfileFields({
       business_name: businessName,
       location,
       description: description || null,
       address: address || null,
       phone: phone || null,
-      logo_url: logoUrl,
       gender,
+      preferred_language: preferredLanguage,
     });
 
-    if (logoUrl) {
+    const supabase = await createClient();
+    await mirrorToProfilesTable(supabase, user.id, {
+      business_name: businessName,
+      location,
+      description: description || null,
+      address: address || null,
+      phone: phone || null,
+      gender,
+      preferred_language: preferredLanguage,
+    });
+
+    if (logoUrl && admin) {
       const targetId = profileId ?? user.id;
       for (const column of ["logo_url", "profile_picture_url"] as const) {
         const { error: logoError } = await admin
@@ -134,5 +176,5 @@ export async function updateBusinessProfileAction(
   revalidatePath("/business/dashboard");
   revalidatePath("/dashboard");
   revalidatePath("/offers");
-  redirect("/business/profile?saved=1");
+  return { saved: true };
 }

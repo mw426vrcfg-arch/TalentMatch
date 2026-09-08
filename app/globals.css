@@ -405,7 +405,7 @@ a.ui-icon-btn:active {
   }
 
   .ui-alert-ok {
-    @apply rounded-2xl border border-white/20 bg-white/80 px-4 py-3 text-sm text-ink shadow-[0_8px_24px_rgba(15,15,20,0.05)] backdrop-blur-md;
+    @apply rounded-2xl border border-emerald-500/30 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 shadow-[0_8px_24px_rgba(5,90,50,0.08)];
   }
 
   .ui-alert-error {

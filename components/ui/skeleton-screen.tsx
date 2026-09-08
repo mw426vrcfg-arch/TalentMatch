@@ -11,7 +11,12 @@ export function SkeletonScreen({
   children: React.ReactNode;
 }) {
   return (
-    <main className={showTabBar ? "min-h-screen pb-24" : "min-h-screen"} role="status" aria-busy="true">
+    <main
+      suppressHydrationWarning
+      className={showTabBar ? "min-h-screen pb-24" : "min-h-screen"}
+      role="status"
+      aria-busy="true"
+    >
       <AppHeader>
         <div className="min-w-0">
           <p className="app-header-brand font-serif text-xl tracking-tight text-ink">TalentMatch</p>

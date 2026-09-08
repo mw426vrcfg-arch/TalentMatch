@@ -35,7 +35,11 @@ export async function requireBusiness() {
   try {
     const admin = tryCreateAdminClient();
     if (admin) {
-      const loaded = await loadBusinessProfileByUserId(admin, user.id);
+      const loaded = await loadBusinessProfileByUserId(
+        admin,
+        user.id,
+        user.user_metadata as Record<string, unknown>,
+      );
       business = loaded.profile;
     }
   } catch (error) {

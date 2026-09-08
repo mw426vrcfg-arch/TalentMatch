@@ -20,7 +20,7 @@ export async function SalonShell({ salonName, location, logoUrl, headerAction, c
   const { business } = await requireBusiness();
   const pending = business ? await loadSalonPendingApplications(business.id) : [];
   return (
-    <main className="min-h-screen pb-24">
+    <main suppressHydrationWarning className="min-h-screen pb-24">
       <InAppPushHost />
       <AppHeader>
         <div className="flex min-w-0 items-center gap-3">

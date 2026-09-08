@@ -12,6 +12,7 @@ export function LanguageSwitcher({
 
   const pills = (
     <div
+      suppressHydrationWarning
       className={`grid grid-cols-3 gap-0.5 rounded-full bg-white/55 p-0.5 ring-1 ring-white/40 ${
         compact ? "" : "mt-0"
       }`}

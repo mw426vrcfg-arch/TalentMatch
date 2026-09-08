@@ -29,7 +29,7 @@ export default async function CustomerProfilePage({
     .filter(Boolean);
   const { user, profile, strikes } = await requireCustomer();
   const admin = createAdminClient();
-  const loaded = await loadCustomerProfile(admin, user.id);
+  const loaded = await loadCustomerProfile(admin, user.id, user.user_metadata as Record<string, unknown>);
   const hairPortfolio = await loadHairPortfolio(
     admin,
     user.id,
@@ -41,12 +41,14 @@ export default async function CustomerProfilePage({
     full_name: loaded.profile?.full_name || profile.full_name,
     bio: loaded.profile?.bio ?? null,
     avatar_url: resolveAvatarUrl(loaded.profile?.avatar_url),
+    phone: loaded.profile?.phone ?? profile.phone ?? null,
     hair_portfolio: hairPortfolio,
     hair: loaded.profile?.hair ?? { structure: null, length: null, chemical: null },
     treatment_pass: loaded.profile?.treatment_pass ?? EMPTY_TREATMENT_PASS,
     beauty_points: loaded.profile?.beauty_points ?? 0,
     member_level: loaded.profile?.member_level ?? "Bronze",
     gender: loaded.profile?.gender ?? null,
+    preferred_language: loaded.profile?.preferred_language ?? null,
     in_app_push: loaded.profile?.in_app_push ?? true,
   };
 

@@ -159,7 +159,7 @@ export const de = {
     title: "Dein Profil",
     intro:
       "Name, Bio, Haarprofil und Foto. Dein Strike-Stand bleibt nur für dich und angenommene Termine sichtbar.",
-    saved: "Profil gespeichert.",
+    saved: "Änderungen erfolgreich gespeichert",
     photo: "Foto",
     avatar: "Profilbild",
     avatarHint: "JPG, PNG oder WebP, max. 2 MB",
@@ -170,7 +170,7 @@ export const de = {
     salonTitle: "Profil bearbeiten",
     salonIntro:
       "Name, Ort und Logo für dein Salon-Konto. Lade andere Salons ein, um in diesem Monat einen extra dringenden Termin zu erhalten.",
-    salonSaved: "Profil gespeichert. Die Kundenseite zeigt jetzt deine aktuellen Daten.",
+    salonSaved: "Änderungen erfolgreich gespeichert",
     logo: "Logo / Profilbild",
     shortDescription: "Kurzbeschreibung",
     salonName: "Salon-Name",
@@ -1174,7 +1174,7 @@ export const en: Messages = {
     title: "Your profile",
     intro:
       "Name, bio, hair profile and photo. Your strike count stays visible only to you and accepted appointments.",
-    saved: "Profile saved.",
+    saved: "Changes saved successfully",
     photo: "Photo",
     avatar: "Profile photo",
     avatarHint: "JPG, PNG or WebP, max. 2 MB",
@@ -1185,7 +1185,7 @@ export const en: Messages = {
     salonTitle: "Edit profile",
     salonIntro:
       "Name, location and logo for your salon account. Invite other salons to earn an extra last-minute appointment this month.",
-    salonSaved: "Profile saved. Clients now see your latest details.",
+    salonSaved: "Changes saved successfully",
     logo: "Logo / profile photo",
     shortDescription: "Short description",
     salonName: "Salon name",
@@ -2175,7 +2175,7 @@ export const fr: Messages = {
     title: "Ton profil",
     intro:
       "Nom, bio, profil capillaire et photo. Ton solde de strikes reste visible seulement pour toi et les rendez-vous acceptés.",
-    saved: "Profil enregistré.",
+    saved: "Modifications enregistrées avec succès",
     photo: "Photo",
     avatar: "Photo de profil",
     avatarHint: "JPG, PNG ou WebP, max. 2 Mo",
@@ -2186,7 +2186,7 @@ export const fr: Messages = {
     salonTitle: "Modifier le profil",
     salonIntro:
       "Nom, lieu et logo pour ton compte salon. Invite d’autres salons pour obtenir un rendez-vous urgent extra ce mois-ci.",
-    salonSaved: "Profil enregistré. Les clientes voient maintenant tes données actuelles.",
+    salonSaved: "Modifications enregistrées avec succès",
     logo: "Logo / photo de profil",
     shortDescription: "Courte description",
     salonName: "Nom du salon",

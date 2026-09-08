@@ -5,7 +5,6 @@ import Link from "next/link";
 import { sendFeedbackAction } from "@/app/actions/send-feedback";
 import { signOutAction } from "@/app/auth/actions";
 import {
-  updateGenderAction,
   updatePushPreferenceAction,
 } from "@/app/dashboard/profile/settings-actions";
 import { type GenderValue } from "@/lib/profile/gender";
@@ -23,12 +22,6 @@ const LEGAL: { href: string; key: MessageKey }[] = [
   { href: "/datenschutz", key: "settings.privacy" },
 ];
 
-const GENDERS: { value: Exclude<GenderValue, "">; key: MessageKey }[] = [
-  { value: "female", key: "settings.genderFemale" },
-  { value: "male", key: "settings.genderMale" },
-  { value: "diverse", key: "settings.genderDiverse" },
-];
-
 const CUSTOMER_HELP: { title: MessageKey; body: MessageKey }[] = [
   { title: "settings.helpRulesTitle", body: "settings.helpRulesBody" },
   { title: "settings.helpStrikesTitle", body: "settings.helpStrikesBody" },
@@ -43,7 +36,7 @@ const SALON_HELP: { title: MessageKey; body: MessageKey }[] = [
 ];
 
 export function SettingsHub({
-  gender,
+  gender: _gender,
   pushEnabled,
   variant = "customer",
 }: {
@@ -54,7 +47,6 @@ export function SettingsHub({
   const t = useT();
   const localize = useLocalize();
   const isSalon = variant === "salon";
-  const [selectedGender, setSelectedGender] = useState<GenderValue>(gender);
   const [pushOn, setPushOn] = useState(pushEnabled);
   const [helpOpen, setHelpOpen] = useState(false);
   const [legalOpen, setLegalOpen] = useState(false);
@@ -67,14 +59,9 @@ export function SettingsHub({
   const [feedbackClosing, setFeedbackClosing] = useState(false);
   const [feedbackError, setFeedbackError] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
-  const [, startGender] = useTransition();
   const [, startPush] = useTransition();
   const sending = isSending || feedbackClosing;
   const helpItems = isSalon ? SALON_HELP : CUSTOMER_HELP;
-
-  useEffect(() => {
-    setSelectedGender(gender);
-  }, [gender]);
 
   useEffect(() => {
     const stored = readPushEnabled();
@@ -155,35 +142,6 @@ export function SettingsHub({
                 <LanguageSwitcher compact />
               </div>
             </div>
-          )}
-          {isSalon ? null : (
-          <div className="px-4 py-3.5">
-            <p className="text-[13px] text-ink-soft">{t("settings.gender")}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {GENDERS.map((option) => {
-                const active = selectedGender === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      hapticTap("light");
-                      setSelectedGender(option.value);
-                      const data = new FormData();
-                      data.set("gender", option.value);
-                      startGender(() => {
-                        void updateGenderAction(data);
-                      });
-                    }}
-                    className={active ? "ui-choice-active" : "ui-choice"}
-                    aria-pressed={active}
-                  >
-                    {t(option.key)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
           )}
           <div className="flex items-center justify-between gap-3 px-4 py-3.5">
             <div className="min-w-0">

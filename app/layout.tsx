@@ -32,12 +32,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang={htmlLang(DEFAULT_LOCALE)} suppressHydrationWarning>
-      <body className={`${plusJakarta.variable} ${cormorant.variable} min-h-screen font-sans text-ink antialiased`}>
+      <body
+        suppressHydrationWarning
+        className={`${plusJakarta.variable} ${cormorant.variable} min-h-screen font-sans text-ink antialiased`}
+      >
         <script dangerouslySetInnerHTML={{ __html: localeBootstrap }} />
-        <AnalyticsProvider>
-          <I18nProvider>{children}</I18nProvider>
-        </AnalyticsProvider>
-        <Analytics />
+        <I18nProvider>
+          <AnalyticsProvider>
+            {children}
+          </AnalyticsProvider>
+          <Analytics />
+        </I18nProvider>
       </body>
     </html>
   );

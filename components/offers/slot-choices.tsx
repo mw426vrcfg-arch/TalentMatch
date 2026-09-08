@@ -34,7 +34,7 @@ export function SlotChoices({
   const availableCount = slots.filter((slot) => !slot.is_booked).length;
 
   return (
-    <div className={compact ? "mt-3 space-y-4" : "mt-4 space-y-5"}>
+    <div suppressHydrationWarning className={compact ? "mt-3 space-y-4" : "mt-4 space-y-5"}>
       {groups.map((group) => (
         <div key={group.key}>
           <p className="ui-kicker">{group.label}</p>
