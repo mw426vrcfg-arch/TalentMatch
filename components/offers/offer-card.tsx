@@ -1,4 +1,5 @@
 import { OfferLink } from "@/components/analytics/offer-link";
+import { applyReturnPath } from "@/lib/auth/return-to";
 import { formatChf, isStrongSaving, savingsPercent } from "@/lib/offers/format";
 import { UrgentCountdown } from "@/components/offers/urgent-countdown";
 import { earliestUnbookedSlot, type BrowseOffer } from "@/lib/offers/load-active-offers";
@@ -10,6 +11,17 @@ import { LocalizedText } from "@/components/i18n/localized-text";
 import { CoverImage } from "@/components/ui/cover-image";
 import { offerServiceTag } from "@/lib/offers/service-type";
 import { partnerInitial } from "@/lib/offers/anonymize";
+
+export function offerPrimaryHref(offer: BrowseOffer, signedIn: boolean) {
+  if (!signedIn) {
+    return `/offers/${offer.id}`;
+  }
+  const slot = offer.slots.find((item) => !item.is_booked);
+  if (!slot) {
+    return `/offers/${offer.id}`;
+  }
+  return applyReturnPath(offer.id, slot.id);
+}
 
 function PartnerMark({ offer }: { offer: BrowseOffer }) {
   const tag = offerServiceTag(offer.service_type, offer.title);
@@ -75,6 +87,7 @@ export function OfferCard({
   const cover = offer.image_url;
   const percentOff = savingsPercent(offer.normal_price, offer.discount_price);
   const showSavings = isStrongSaving(percentOff);
+  const href = offerPrimaryHref(offer, signedIn);
 
   return (
     <article
@@ -82,23 +95,25 @@ export function OfferCard({
     >
       {cover ? (
         <div className="relative -mx-5 -mt-5 mb-5 overflow-hidden sm:-mx-6 sm:-mt-6">
-          <CoverImage src={cover} className="aspect-[4/3] w-full object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
-          {offer.is_urgent ? (
-            <div className="absolute top-3 left-3 z-10">
-              <UrgentBadge />
-            </div>
-          ) : null}
+          <OfferLink href={href} offerId={offer.id} className="relative block">
+            <CoverImage src={cover} className="aspect-[4/3] w-full object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+            {offer.is_urgent ? (
+              <div className="absolute top-3 left-3 z-10">
+                <UrgentBadge />
+              </div>
+            ) : null}
+            {showSavings && percentOff != null ? (
+              <div className="absolute bottom-3 left-3 z-10">
+                <span className="inline-flex rounded-full bg-emerald-600/95 px-3 py-1 text-[11px] font-semibold tracking-wide text-white shadow-[0_8px_20px_rgba(5,90,50,0.28)]">
+                  <T k="browse.savings" values={{ percent: percentOff }} />
+                </span>
+              </div>
+            ) : null}
+          </OfferLink>
           {showFavorite ? (
             <div className="absolute top-3 right-3 z-10">
               <FavoriteHeart offerId={offer.id} initialSaved={favorited} />
-            </div>
-          ) : null}
-          {showSavings && percentOff != null ? (
-            <div className="absolute bottom-3 left-3 z-10">
-              <span className="inline-flex rounded-full bg-emerald-600/95 px-3 py-1 text-[11px] font-semibold tracking-wide text-white shadow-[0_8px_20px_rgba(5,90,50,0.28)]">
-                <T k="browse.savings" values={{ percent: percentOff }} />
-              </span>
             </div>
           ) : null}
         </div>
@@ -110,7 +125,7 @@ export function OfferCard({
             </div>
           ) : null}
           <div className="flex items-start justify-between gap-3">
-            <OfferLink href={`/offers/${offer.id}`} offerId={offer.id} className="min-w-0 flex-1">
+            <OfferLink href={href} offerId={offer.id} className="min-w-0 flex-1">
               <PartnerMark offer={offer} />
             </OfferLink>
             <div className="flex shrink-0 flex-col items-end gap-2">
@@ -122,7 +137,7 @@ export function OfferCard({
       )}
       {cover ? (
         <div className="flex items-start justify-between gap-3">
-          <OfferLink href={`/offers/${offer.id}`} offerId={offer.id} className="min-w-0 flex-1">
+          <OfferLink href={href} offerId={offer.id} className="min-w-0 flex-1">
             <PartnerMark offer={offer} />
           </OfferLink>
           {liveSlot ? <UrgentCountdown iso={liveSlot.start_time} /> : null}
@@ -133,7 +148,7 @@ export function OfferCard({
           <T k="browse.perfectMatch" />
         </p>
       ) : null}
-      <OfferLink href={`/offers/${offer.id}`} offerId={offer.id} className="block">
+      <OfferLink href={href} offerId={offer.id} className="block">
         <h2 className="mt-5 font-serif text-2xl leading-tight text-ink sm:text-3xl">{offer.title}</h2>
         {offer.description ? (
           <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-soft">{offer.description}</p>

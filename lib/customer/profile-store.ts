@@ -72,7 +72,7 @@ export function mapCustomerProfileRow(row: unknown, userId: string): CustomerPro
     return null;
   }
 
-  const points = Math.max(0, Number(data.beauty_points ?? 0) || 0);
+  const points = Math.max(0, Number(data.beauty_points ?? data.points ?? 0) || 0);
   const genderRaw = data.gender != null ? String(data.gender) : "";
   const gender =
     genderRaw === "female" || genderRaw === "male" || genderRaw === "diverse" ? genderRaw : null;

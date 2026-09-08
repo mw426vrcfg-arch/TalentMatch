@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { OfferCard } from "@/components/offers/offer-card";
+import { OfferGrid } from "@/components/offers/offer-grid";
 import { UrgentFilterToggle } from "@/components/offers/urgent-filter";
 import { useT, useLocale } from "@/components/i18n/i18n-provider";
 import { pinUrgentOffers, searchBrowseOffers } from "@/lib/offers/fuzzy-search";
@@ -16,6 +16,7 @@ export function BrowseSearchBoard({
   favoriteIds = [],
   showFavorite = false,
   matchIds = [],
+  signedIn = false,
 }: {
   offers: BrowseOffer[];
   initialQuery: string;
@@ -23,6 +24,7 @@ export function BrowseSearchBoard({
   favoriteIds?: string[];
   showFavorite?: boolean;
   matchIds?: string[];
+  signedIn?: boolean;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -132,18 +134,13 @@ export function BrowseSearchBoard({
           </p>
         </div>
       ) : (
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
-          {ranked.map((offer) => (
-            <OfferCard
-              key={offer.id}
-              offer={offer}
-              showFavorite={showFavorite}
-              signedIn={showFavorite}
-              favorited={favoriteIds.includes(offer.id)}
-              perfectMatch={matchIds.includes(offer.id)}
-            />
-          ))}
-        </div>
+        <OfferGrid
+          offers={ranked}
+          favoriteIds={favoriteIds}
+          showFavorite={showFavorite}
+          matchIds={matchIds}
+          signedIn={signedIn}
+        />
       )}
     </>
   );

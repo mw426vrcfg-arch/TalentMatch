@@ -95,6 +95,7 @@ export async function completeBookingAction(
   revalidatePath("/business/applications");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/applications");
+  revalidatePath("/dashboard/profile");
   revalidatePublicOffers();
   redirect("/business/dashboard?completed=1");
 }

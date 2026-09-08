@@ -1,6 +1,6 @@
 import { CustomerShell } from "@/components/customer/customer-shell";
 import { FollowSalonButton } from "@/components/offers/follow-salon-button";
-import { OfferCard } from "@/components/offers/offer-card";
+import { OfferGrid } from "@/components/offers/offer-grid";
 import { requireCustomer } from "@/lib/auth/require-customer";
 import { filterBlockedOffers, loadBlockedSalons } from "@/lib/blacklist/store";
 import { loadCustomerLoyalty } from "@/lib/loyalty/store";
@@ -42,11 +42,13 @@ export default async function FavoritesPage() {
             <EmptyExplore messageKey="empty.noFavorites" />
           </div>
         ) : (
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
-            {liked.map((offer) => (
-              <OfferCard key={offer.id} offer={offer} showFavorite favorited />
-            ))}
-          </div>
+          <OfferGrid
+            offers={liked}
+            showFavorite
+            signedIn
+            favoriteIds={liked.map((offer) => offer.id)}
+            className="mt-6 grid gap-6 md:grid-cols-2"
+          />
         )}
       </section>
 

@@ -1,11 +1,19 @@
+import { loyaltyProgress as computeLoyaltyProgress, type LoyaltyProgress } from "@/lib/loyalty/progress";
+
 export const POINTS_PER_COMPLETED_VISIT = 100;
 export const SILVER_POINTS = 500;
 export const GOLD_POINTS = 1500;
+export const PLATINUM_POINTS = 3000;
 export const VIP_EARLY_ACCESS_MS = 30 * 60 * 1000;
 
-export type MemberLevel = "Bronze" | "Silber" | "Gold";
+export type MemberLevel = "Bronze" | "Silber" | "Gold" | "Platin";
+
+export type { LoyaltyProgress };
 
 export function memberLevelFromPoints(points: number): MemberLevel {
+  if (points >= PLATINUM_POINTS) {
+    return "Platin";
+  }
   if (points >= GOLD_POINTS) {
     return "Gold";
   }
@@ -17,17 +25,24 @@ export function memberLevelFromPoints(points: number): MemberLevel {
 
 export function normalizeMemberLevel(value: string | null | undefined): MemberLevel {
   const raw = String(value ?? "").trim().toLowerCase();
-  if (raw === "gold") {
+  if (raw === "platin" || raw === "platinum" || raw === "platine") {
+    return "Platin";
+  }
+  if (raw === "gold" || raw === "or") {
     return "Gold";
   }
-  if (raw === "silber" || raw === "silver") {
+  if (raw === "silber" || raw === "silver" || raw === "argent") {
     return "Silber";
   }
   return "Bronze";
 }
 
+export function loyaltyProgress(points: number): LoyaltyProgress {
+  return computeLoyaltyProgress(points);
+}
+
 export function hasEarlyAccess(level: MemberLevel) {
-  return level === "Silber" || level === "Gold";
+  return level === "Silber" || level === "Gold" || level === "Platin";
 }
 
 export function vipUnlockAt(createdAt: string | null | undefined) {

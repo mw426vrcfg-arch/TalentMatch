@@ -74,6 +74,7 @@ export async function BrowseOffers({
         favoriteIds={favoriteIds}
         showFavorite={Boolean(userId)}
         matchIds={matchIds}
+        signedIn={Boolean(userId)}
       />
     </>
   );
