@@ -31,7 +31,7 @@ export function AddToCalendarButton({ item }: { item: AppointmentOverview }) {
       target="_blank"
       rel="noopener noreferrer"
       type="text/calendar"
-      className="ui-btn-secondary"
+      className="ui-btn-secondary px-3 text-xs"
       onClick={addToCalendar}
     >
       {t("booking.addToCalendar")}

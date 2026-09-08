@@ -16,11 +16,13 @@ export function ReportProblemButton({
   bookingId,
   reportedUserId,
   role,
+  compact = false,
 }: {
   applicationId: string;
   bookingId: string | null;
   reportedUserId: string;
   role: "customer" | "salon";
+  compact?: boolean;
 }) {
   const t = useT();
   const localize = useLocalize();
@@ -39,7 +41,7 @@ export function ReportProblemButton({
   }
 
   return (
-    <div className="mt-3">
+    <div className={compact ? (open ? "w-full min-w-0" : "shrink-0") : "mt-3"}>
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

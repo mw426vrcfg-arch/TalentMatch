@@ -286,6 +286,7 @@ export const de = {
     empty: "Noch keine Nachricht. Klärt Details zum Termin in Echtzeit.",
     placeholder: "Nachricht schreiben…",
     typing: "{name} tippt",
+    sendFailed: "Nachricht konnte nicht gesendet werden.",
   },
   status: {
     pending: "In Prüfung",
@@ -1330,6 +1331,7 @@ export const en: Messages = {
     empty: "No messages yet. Align the appointment details in real time.",
     placeholder: "Write a message…",
     typing: "{name} is typing",
+    sendFailed: "Message could not be sent.",
   },
   status: {
     pending: "In review",
@@ -2365,6 +2367,7 @@ export const fr: Messages = {
     empty: "Pas encore de message. Clarifiez les détails du rendez-vous en temps réel.",
     placeholder: "Écrire un message…",
     typing: "{name} écrit",
+    sendFailed: "Le message n’a pas pu être envoyé.",
   },
   status: {
     pending: "En examen",

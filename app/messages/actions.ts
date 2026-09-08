@@ -8,6 +8,7 @@ import {
   insertChatMessage,
   loadMessagesForApplication,
   resolveBookingIdForApplication,
+  resolveChatRecipientId,
   type ChatMessage,
 } from "@/lib/messages/store";
 
@@ -20,6 +21,22 @@ async function currentUser() {
     throw new Error("Bitte anmelden.");
   }
   return user;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 export async function loadChatMessagesAction(
@@ -48,18 +65,26 @@ export async function sendChatMessageAction(input: {
 }): Promise<{ message?: ChatMessage; error?: string }> {
   try {
     const user = await currentUser();
+    const senderId = sanitizeUuid(user.id);
     const applicationId = sanitizeUuid(input.applicationId);
-    if (!applicationId) {
+    const bookingId = sanitizeUuid(input.bookingId) || null;
+    if (!senderId || !applicationId) {
       return { error: "Termin nicht gefunden." };
     }
     const admin = createAdminClient();
-    await assertChatParticipant(admin, user.id, applicationId);
-    const message = await insertChatMessage(admin, {
-      applicationId,
-      bookingId: sanitizeUuid(input.bookingId) || null,
-      senderId: user.id,
-      body: input.body,
-    });
+    await assertChatParticipant(admin, senderId, applicationId);
+    const recipientId = sanitizeUuid(await resolveChatRecipientId(admin, applicationId, senderId)) || null;
+    const message = await withTimeout(
+      insertChatMessage(admin, {
+        applicationId,
+        bookingId,
+        senderId,
+        recipientId,
+        body: input.body,
+      }),
+      8000,
+      "Das Senden hat zu lange gedauert.",
+    );
     if (!message) {
       return { error: "Nachricht konnte nicht gesendet werden." };
     }

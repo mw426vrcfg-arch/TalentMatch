@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { loadChatMessagesAction, sendChatMessageAction } from "@/app/messages/actions";
 import { TypingBubble } from "@/components/messages/typing-bubble";
@@ -15,18 +15,33 @@ import {
 import { sanitizeUuid } from "@/lib/security/sanitize";
 import { intlLocale } from "@/lib/i18n/config";
 import { useLocale, useLocalize, useT } from "@/components/i18n/i18n-provider";
-import { BusyLabel } from "@/components/ui/busy-label";
 import { CustomTimeActions } from "@/components/messages/custom-time-actions";
 import {
   isOfficialConfirmMessage,
   officialConfirmDisplay,
 } from "@/lib/applications/custom-time";
 
+type LocalChatMessage = ChatMessage & { failed?: boolean };
+
 function formatWhen(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(iso));
+}
+
+function SendFailedIcon({ label }: { label: string }) {
+  return (
+    <span
+      title={label}
+      aria-label={label}
+      className="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#FF3B30] text-white"
+    >
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
+        <path strokeLinecap="round" d="M12 8v5.5M12 16.5v.5" />
+      </svg>
+    </span>
+  );
 }
 
 export function AppointmentChat({
@@ -36,6 +51,7 @@ export function AppointmentChat({
   counterpartName,
   autoFocus = false,
   salonCustomTime = null,
+  headerActions,
 }: {
   applicationId: string;
   bookingId: string | null;
@@ -43,12 +59,12 @@ export function AppointmentChat({
   counterpartName: string;
   autoFocus?: boolean;
   salonCustomTime?: { notes: string | null } | null;
+  headerActions?: ReactNode;
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
   const [peerTyping, setPeerTyping] = useState(false);
   const [customTimeLocked, setCustomTimeLocked] = useState(false);
   const t = useT();
@@ -61,11 +77,12 @@ export function AppointmentChat({
   const typingIdleRef = useRef(0);
   const lastTypingSentRef = useRef(0);
   const peerWatchdogRef = useRef(0);
+  const sendingIdsRef = useRef(new Set<string>());
 
   const safeApplicationId = sanitizeUuid(applicationId);
   const safeBookingId = sanitizeUuid(bookingId);
 
-  const mergeMessage = useCallback((incoming: ChatMessage) => {
+  const mergeMessage = useCallback((incoming: LocalChatMessage) => {
     if (incoming.sender_id !== currentUserId) {
       setPeerTyping(false);
     }
@@ -82,7 +99,18 @@ export function AppointmentChat({
     }
     try {
       const rows = await loadChatMessagesAction(safeApplicationId, safeBookingId || null);
-      setMessages((current) => mergeChatMessages(current, rows));
+      setMessages((current) => {
+        const failed = current.filter((message) => message.failed);
+        const stillSending = current.filter((message) => {
+          if (!sendingIdsRef.current.has(message.id)) {
+            return false;
+          }
+          return !rows.some(
+            (row) => row.sender_id === message.sender_id && row.body === message.body,
+          );
+        });
+        return mergeChatMessages(rows, [...failed, ...stillSending]);
+      });
       if (!silent) {
         setError(null);
       }
@@ -233,29 +261,60 @@ export function AppointmentChat({
 
   function send() {
     const body = draft.trim();
-    if (!body || pending) {
+    if (!body || !safeApplicationId) {
       return;
     }
+
     window.clearTimeout(typingIdleRef.current);
     lastTypingSentRef.current = 0;
     broadcastTyping(false);
+
+    const tempId = crypto.randomUUID();
+    const optimistic: LocalChatMessage = {
+      id: tempId,
+      application_id: safeApplicationId,
+      booking_id: safeBookingId || safeApplicationId,
+      sender_id: currentUserId,
+      body,
+      created_at: new Date().toISOString(),
+    };
+
+    sendingIdsRef.current.add(tempId);
     setDraft("");
-    startTransition(async () => {
-      const result = await sendChatMessageAction({
-        applicationId: safeApplicationId,
-        bookingId: safeBookingId || null,
-        body,
-      });
-      if (result.error) {
-        setError(localize(result.error));
-        setDraft(body);
-        return;
-      }
-      if (result.message) {
-        mergeMessage(result.message);
-      }
-      setError(null);
+    mergeMessage(optimistic);
+    window.requestAnimationFrame(() => {
+      inputRef.current?.focus({ preventScroll: true });
     });
+
+    void sendChatMessageAction({
+      applicationId: safeApplicationId,
+      bookingId: safeBookingId || null,
+      body,
+    })
+      .then((result) => {
+        sendingIdsRef.current.delete(tempId);
+        if (result.error || !result.message) {
+          setMessages((current) =>
+            current.map((message) => (message.id === tempId ? { ...message, failed: true } : message)),
+          );
+          setError(localize(result.error || t("chat.sendFailed")));
+          return;
+        }
+        setError(null);
+        setMessages((current) => {
+          const withoutTemp = current.filter((message) => message.id !== tempId);
+          return mergeChatMessages(withoutTemp, [result.message as ChatMessage]);
+        });
+      })
+      .catch((sendError) => {
+        sendingIdsRef.current.delete(tempId);
+        setMessages((current) =>
+          current.map((message) => (message.id === tempId ? { ...message, failed: true } : message)),
+        );
+        setError(
+          sendError instanceof Error ? localize(sendError.message) : t("chat.sendFailed"),
+        );
+      });
   }
 
   return (
@@ -265,8 +324,15 @@ export function AppointmentChat({
       }`}
     >
       <div className="border-b border-white/20 px-4 py-3">
-        <p className="ui-kicker">{t("chat.kicker")}</p>
-        <p className="mt-1 text-sm text-ink">{t("chat.with", { name: counterpartName })}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-0 basis-full">
+            <p className="ui-kicker">{t("chat.kicker")}</p>
+            <p className="mt-1 truncate text-sm text-ink">{t("chat.with", { name: counterpartName })}</p>
+          </div>
+          {headerActions ? (
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2">{headerActions}</div>
+          ) : null}
+        </div>
       </div>
       <div ref={listRef} className="max-h-56 space-y-2 overflow-y-auto px-4 py-3">
         {!loaded ? (
@@ -289,7 +355,7 @@ export function AppointmentChat({
             }
             const mine = message.sender_id === currentUserId;
             return (
-              <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+              <div key={message.id} className={`flex items-end gap-1.5 ${mine ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                     mine
@@ -302,6 +368,7 @@ export function AppointmentChat({
                     {formatWhen(message.created_at, intlLocale(locale))}
                   </p>
                 </div>
+                {message.failed ? <SendFailedIcon label={t("chat.sendFailed")} /> : null}
               </div>
             );
           })
@@ -346,8 +413,8 @@ export function AppointmentChat({
             placeholder={t("chat.placeholder")}
             className="ui-input min-h-10 py-2"
           />
-          <button type="submit" disabled={pending || !draft.trim()} aria-busy={pending} className="ui-btn-primary px-4">
-            {pending ? <BusyLabel>{t("common.sending")}</BusyLabel> : t("actions.send")}
+          <button type="submit" disabled={!draft.trim()} className="ui-btn-primary px-4">
+            {t("actions.send")}
           </button>
         </form>
       </div>

@@ -163,6 +163,43 @@ export async function assertChatParticipant(admin: Admin, userId: string, applic
   throw new Error("Kein Zugang zu diesem Chat.");
 }
 
+export async function resolveChatRecipientId(admin: Admin, applicationId: string, senderId: string) {
+  const { data: application } = await admin
+    .from("applications")
+    .select("customer_id, offer_id")
+    .eq("id", applicationId)
+    .maybeSingle();
+  if (!application?.customer_id) {
+    return "";
+  }
+
+  const customerId = String(application.customer_id);
+  if (customerId && customerId !== senderId) {
+    return customerId;
+  }
+
+  const { data: offer } = await admin
+    .from("offers")
+    .select("business_id")
+    .eq("id", application.offer_id)
+    .maybeSingle();
+  const businessId = offer?.business_id ? String(offer.business_id) : "";
+  if (!businessId) {
+    return "";
+  }
+  if (businessId !== senderId) {
+    const { data: byId } = await admin
+      .from("business_profiles")
+      .select("user_id")
+      .eq("id", businessId)
+      .maybeSingle();
+    const salonUserId = byId?.user_id ? String(byId.user_id) : businessId;
+    return salonUserId !== senderId ? salonUserId : "";
+  }
+
+  return customerId !== senderId ? customerId : "";
+}
+
 export function chatThreadIds(applicationId: string, bookingId?: string | null) {
   return [...new Set([applicationId, bookingId].filter((value): value is string => Boolean(value)))];
 }
@@ -364,6 +401,7 @@ export async function insertChatMessage(
     applicationId: string;
     bookingId?: string | null;
     senderId: string;
+    recipientId?: string | null;
     body: string;
   },
 ) {
@@ -371,27 +409,35 @@ export async function insertChatMessage(
   if (!body) {
     throw new Error("Bitte eine Nachricht zwischen 1 und 2000 Zeichen schreiben.");
   }
+  if (!input.senderId) {
+    throw new Error("Absender fehlt.");
+  }
 
   const bookingId = await resolveBookingIdForApplication(
     admin,
     input.applicationId,
     input.bookingId ?? null,
   );
+  const recipientId = input.recipientId || "";
   const threadIds = chatThreadIds(input.applicationId, bookingId);
 
   const attempts: Record<string, unknown>[] = threadIds.flatMap((threadId) => [
     {
       booking_id: threadId,
+      conversation_id: input.applicationId,
       from_user_id: input.senderId,
       sender_id: input.senderId,
+      recipient_id: recipientId || undefined,
       message: body,
       body,
     },
     {
       application_id: input.applicationId,
       booking_id: threadId,
+      conversation_id: input.applicationId,
       sender_id: input.senderId,
       from_user_id: input.senderId,
+      recipient_id: recipientId || undefined,
       body,
       message: body,
     },
@@ -422,8 +468,10 @@ export async function insertChatMessage(
   try {
     const saved = await insertFlexible(admin, "messages", {
       application_id: input.applicationId,
+      conversation_id: input.applicationId,
       sender_id: input.senderId,
       from_user_id: input.senderId,
+      recipient_id: recipientId || undefined,
       body,
       message: body,
     });

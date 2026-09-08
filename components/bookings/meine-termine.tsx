@@ -72,16 +72,21 @@ function AppointmentCard({
   const showRegion =
     role === "customer" && !showAddress && Boolean(item.event_location);
   const showChat = isMessagingEnabled(item.status);
+  const showCalendar =
+    item.status === "confirmed" ||
+    item.status === "accepted" ||
+    item.status === "swap_requested" ||
+    item.status === "completed";
   const t = useT();
   const locale = useLocale();
 
   return (
     <article
       id={`appointment-${item.application_id}`}
-      className={`ui-card scroll-mt-28 p-5 ${focused ? "ui-focus-card" : ""}`}
+      className={`ui-card min-w-0 scroll-mt-28 overflow-hidden p-5 ${focused ? "ui-focus-card" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           {item.counterpart_logo_url ? (
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/40">
               <AppImage
@@ -146,14 +151,20 @@ function AppointmentCard({
         </div>
       ) : null}
 
-      {actions ? <div className="mt-4 flex flex-wrap gap-2">{actions}</div> : null}
-      {item.counterpart_user_id ? (
-        <ReportProblemButton
-          applicationId={item.application_id}
-          bookingId={item.booking_id}
-          reportedUserId={item.counterpart_user_id}
-          role={role}
-        />
+      {actions || (!showChat && showCalendar) ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {!showChat && showCalendar ? <AddToCalendarButton item={item} /> : null}
+          {!showChat && item.counterpart_user_id ? (
+            <ReportProblemButton
+              applicationId={item.application_id}
+              bookingId={item.booking_id}
+              reportedUserId={item.counterpart_user_id}
+              role={role}
+              compact
+            />
+          ) : null}
+          {actions}
+        </div>
       ) : null}
       {showChat ? (
         <AppointmentChat
@@ -162,6 +173,20 @@ function AppointmentCard({
           currentUserId={currentUserId}
           counterpartName={item.counterpart_name}
           autoFocus={Boolean(focused && openChat)}
+          headerActions={
+            <div className="flex flex-wrap items-center gap-2">
+              {showCalendar ? <AddToCalendarButton item={item} /> : null}
+              {item.counterpart_user_id ? (
+                <ReportProblemButton
+                  applicationId={item.application_id}
+                  bookingId={item.booking_id}
+                  reportedUserId={item.counterpart_user_id}
+                  role={role}
+                  compact
+                />
+              ) : null}
+            </div>
+          }
         />
       ) : null}
     </article>
@@ -223,15 +248,8 @@ export function MeineTermine({
     const swapPending = item.status === "swap_requested";
 
     if (role !== "salon") {
-      const calendar =
-        open || item.status === "completed" ? <AddToCalendarButton item={item} /> : null;
       if (section !== "upcoming" || !open) {
-        return (
-          <>
-            {calendar}
-            {cancel}
-          </>
-        );
+        return cancel;
       }
       return (
         <>
@@ -240,7 +258,6 @@ export function MeineTermine({
           ) : (
             <SwapRequestButton applicationId={item.application_id} />
           )}
-          {calendar}
           {cancel}
         </>
       );
@@ -258,24 +275,12 @@ export function MeineTermine({
       );
     }
 
-    const showCalendar = open || item.status === "completed";
-    const calendar = showCalendar ? <AddToCalendarButton item={item} /> : null;
-
     if (item.status !== "confirmed" || !item.booking_id) {
-      if (!calendar && !cancel) {
-        return undefined;
-      }
-      return (
-        <>
-          {calendar}
-          {cancel}
-        </>
-      );
+      return cancel ?? undefined;
     }
 
     return (
       <>
-        {calendar}
         {cancel}
         <CompleteButton bookingId={item.booking_id} />
         <NoShowButton bookingId={item.booking_id} />
