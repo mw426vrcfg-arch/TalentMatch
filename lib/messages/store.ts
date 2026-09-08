@@ -1,3 +1,4 @@
+import { isCustomTimeRequest } from "@/lib/applications/custom-time";
 import { sanitizeMultiline, TEXT_LIMITS } from "@/lib/security/sanitize";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { insertFlexible, isMissingRelation } from "@/lib/supabase/flexible-write";
@@ -58,8 +59,17 @@ export function isMessagingEnabled(status: string) {
     status === "accepted" ||
     status === "confirmed" ||
     status === "swap_requested" ||
-    status === "completed"
+    status === "completed" ||
+    status === "requested_custom_time"
   );
+}
+
+export function canOpenApplicationChat(
+  status: string,
+  notes?: string | null,
+  customTimeNotes?: string | null,
+) {
+  return isMessagingEnabled(status) || isCustomTimeRequest(status, notes, customTimeNotes);
 }
 
 export async function resolveBookingIdForApplication(
@@ -80,28 +90,47 @@ export async function resolveBookingIdForApplication(
 }
 
 export async function assertChatParticipant(admin: Admin, userId: string, applicationId: string) {
-  const { data: application, error } = await admin
+  const first = await admin
     .from("applications")
-    .select("id, status, customer_id, offer_id")
+    .select("id, status, customer_id, offer_id, notes, custom_time_notes")
     .eq("id", applicationId)
     .maybeSingle();
 
-  if (error || !application) {
-    throw new Error("Termin nicht gefunden.");
+  const application =
+    !first.error && first.data
+      ? first.data
+      : first.error && /custom_time_notes/i.test(first.error.message)
+        ? (
+            await admin
+              .from("applications")
+              .select("id, status, customer_id, offer_id, notes")
+              .eq("id", applicationId)
+              .maybeSingle()
+          ).data
+        : null;
+
+  if (!application) {
+    throw new Error(first.error?.message ?? "Termin nicht gefunden.");
   }
 
-  if (!isMessagingEnabled(String(application.status)) && String(application.status) !== "accepted") {
+  const row = application;
+  const status = String(row.status);
+  const notes = (row.notes as string | null | undefined) ?? null;
+  const customTimeNotes =
+    "custom_time_notes" in row ? ((row.custom_time_notes as string | null | undefined) ?? null) : null;
+
+  if (!canOpenApplicationChat(status, notes, customTimeNotes)) {
     throw new Error("Nachrichten sind erst nach der Zusage möglich.");
   }
 
-  if (application.customer_id === userId) {
-    return application;
+  if (row.customer_id === userId) {
+    return row;
   }
 
   const { data: offer } = await admin
     .from("offers")
     .select("id, business_id")
-    .eq("id", application.offer_id)
+    .eq("id", row.offer_id)
     .maybeSingle();
 
   if (!offer) {
@@ -110,7 +139,7 @@ export async function assertChatParticipant(admin: Admin, userId: string, applic
 
   const businessId = offer.business_id as string;
   if (businessId === userId) {
-    return application;
+    return row;
   }
 
   const { data: byId } = await admin
@@ -119,7 +148,7 @@ export async function assertChatParticipant(admin: Admin, userId: string, applic
     .eq("id", businessId)
     .maybeSingle();
   if (byId?.user_id === userId) {
-    return application;
+    return row;
   }
 
   const { data: byUser } = await admin
@@ -128,7 +157,7 @@ export async function assertChatParticipant(admin: Admin, userId: string, applic
     .eq("user_id", userId)
     .maybeSingle();
   if (byUser && (byUser.id === businessId || businessId === userId)) {
-    return application;
+    return row;
   }
 
   throw new Error("Kein Zugang zu diesem Chat.");
@@ -211,26 +240,35 @@ export async function insertChatMessage(
     input.applicationId,
     input.bookingId ?? null,
   );
-  if (!bookingId) {
-    throw new Error("Chat ist erst nach der Terminbestätigung möglich.");
-  }
 
-  const threadIds = [...new Set([input.applicationId, bookingId].filter(Boolean))];
-  const attempts: Record<string, unknown>[] = threadIds.flatMap((threadId) => [
+  const attempts: Record<string, unknown>[] = [
     {
-      booking_id: threadId,
+      application_id: input.applicationId,
+      sender_id: input.senderId,
       from_user_id: input.senderId,
+      body,
       message: body,
     },
-  ]);
-  attempts.push({
-    application_id: input.applicationId,
-    booking_id: bookingId,
-    sender_id: input.senderId,
-    from_user_id: input.senderId,
-    body,
-    message: body,
-  });
+  ];
+
+  if (bookingId) {
+    const threadIds = [...new Set([input.applicationId, bookingId].filter(Boolean))];
+    for (const threadId of threadIds) {
+      attempts.push({
+        booking_id: threadId,
+        from_user_id: input.senderId,
+        message: body,
+      });
+    }
+    attempts.push({
+      application_id: input.applicationId,
+      booking_id: bookingId,
+      sender_id: input.senderId,
+      from_user_id: input.senderId,
+      body,
+      message: body,
+    });
+  }
 
   let lastError = "Nachricht konnte nicht gesendet werden.";
   for (const row of attempts) {

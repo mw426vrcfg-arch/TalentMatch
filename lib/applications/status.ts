@@ -1,5 +1,6 @@
 export const APPLICATION_STATUS_LABEL: Record<string, string> = {
   pending: "In Prüfung",
+  requested_custom_time: "Wunschtermin angefragt",
   accepted: "Bestätigt",
   rejected: "Abgelehnt",
   confirmed: "Bestätigt",
@@ -26,6 +27,10 @@ export function applicationStatusMessage(status: string, bookingStatus?: string 
 
   if (status === "rejected") {
     return "Der Salon hat die Anfrage abgelehnt. Die Zeit bleibt für andere frei.";
+  }
+
+  if (status === "requested_custom_time") {
+    return "Wunschtermin angefragt (Wartet auf Rückmeldung vom Salon)";
   }
 
   return "Der Salon prüft gerade deine Bilder und Notizen.";

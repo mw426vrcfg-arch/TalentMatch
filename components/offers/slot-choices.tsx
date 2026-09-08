@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CustomTimeRequestControl } from "@/components/offers/custom-time-request";
 import { useLocale, useT } from "@/components/i18n/i18n-provider";
 import { intlLocale } from "@/lib/i18n/config";
 import { formatSlotDay, formatSlotTime, groupSlotsByDay } from "@/lib/offers/format";
@@ -13,18 +14,33 @@ export function SlotChoices({
   compact = false,
   canApply = true,
   signedIn = true,
+  hasHairPhotos = false,
 }: {
   offerId: string;
   slots: BrowseSlot[];
   compact?: boolean;
   canApply?: boolean;
   signedIn?: boolean;
+  hasHairPhotos?: boolean;
 }) {
   const t = useT();
   const locale = useLocale();
+  const customControl = canApply ? (
+    <CustomTimeRequestControl
+      offerId={offerId}
+      signedIn={signedIn}
+      compact={compact}
+      hasHairPhotos={hasHairPhotos}
+    />
+  ) : null;
 
   if (slots.length === 0) {
-    return <p className="mt-2 text-sm text-ink-soft">{t("browse.noAppointments")}</p>;
+    return (
+      <div className={compact ? "mt-2" : "mt-2"}>
+        <p className="text-sm text-ink-soft">{t("browse.noAppointments")}</p>
+        {customControl}
+      </div>
+    );
   }
 
   const groups = groupSlotsByDay(slots).map((group) => ({
@@ -91,6 +107,7 @@ export function SlotChoices({
       {availableCount === 0 ? (
         <p className="text-sm text-ink-soft">{t("browse.allBooked")}</p>
       ) : null}
+      {customControl}
     </div>
   );
 }

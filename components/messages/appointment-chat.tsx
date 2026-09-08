@@ -16,6 +16,7 @@ import { sanitizeUuid } from "@/lib/security/sanitize";
 import { intlLocale } from "@/lib/i18n/config";
 import { useLocale, useLocalize, useT } from "@/components/i18n/i18n-provider";
 import { BusyLabel } from "@/components/ui/busy-label";
+import { CustomTimeActions } from "@/components/messages/custom-time-actions";
 
 function formatWhen(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
@@ -30,12 +31,14 @@ export function AppointmentChat({
   currentUserId,
   counterpartName,
   autoFocus = false,
+  salonCustomTime = null,
 }: {
   applicationId: string;
   bookingId: string | null;
   currentUserId: string;
   counterpartName: string;
   autoFocus?: boolean;
+  salonCustomTime?: { notes: string | null } | null;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -131,7 +134,9 @@ export function AppointmentChat({
     }
 
     const supabase = createClient();
-    const filter = `booking_id=eq.${safeApplicationId}`;
+    const filter = safeBookingId
+      ? `booking_id=eq.${safeBookingId}`
+      : `application_id=eq.${safeApplicationId}`;
     const topic = chatRealtimeChannel(safeApplicationId, safeBookingId || null);
 
     const channel = supabase
@@ -312,6 +317,13 @@ export function AppointmentChat({
         )}
       </div>
       {error ? <p className="px-4 pb-2 text-xs text-rose">{error}</p> : null}
+      {salonCustomTime ? (
+        <CustomTimeActions
+          applicationId={safeApplicationId}
+          customTimeNotes={salonCustomTime.notes}
+          onCounterProposal={() => inputRef.current?.focus()}
+        />
+      ) : null}
       <div className="border-t border-white/20">
         {peerTyping ? (
           <TypingBubble label={t("chat.typing", { name: counterpartName })} />

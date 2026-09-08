@@ -1,3 +1,8 @@
+import {
+  isCustomTimeRequest,
+  parseCustomTimeNotes,
+  REQUESTED_CUSTOM_TIME,
+} from "@/lib/applications/custom-time";
 import { parseSlotIdFromNotes } from "@/lib/applications/slot-from-notes";
 import { signApplicationImages } from "@/lib/applications/image-urls";
 import { resolveAvatarUrl } from "@/lib/customer/images";
@@ -15,6 +20,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export type SalonApplication = {
   id: string;
   notes: string | null;
+  custom_time_notes: string | null;
   status: string;
   uploaded_images: string[];
   created_at: string;
@@ -22,6 +28,7 @@ export type SalonApplication = {
   offer_id: string;
   offer_title: string;
   slot_start: string | null;
+  is_custom_time: boolean;
   customer: {
     id: string;
     full_name: string;
@@ -44,6 +51,63 @@ function asOne<T>(value: T | T[] | null | undefined): T | null {
 
 const APPLICATION_COLUMNS =
   "id, notes, status, uploaded_images, created_at, offer_id, customer_id";
+const APPLICATION_COLUMNS_WITH_CUSTOM = `${APPLICATION_COLUMNS}, custom_time_notes`;
+
+type PendingApplicationRow = {
+  id: string;
+  notes: string | null;
+  status: string;
+  uploaded_images: string[] | null;
+  created_at: string;
+  offer_id: string;
+  customer_id: string;
+  custom_time_notes?: string | null;
+};
+
+async function loadPendingRows(
+  admin: ReturnType<typeof createAdminClient>,
+  offerIds: string[],
+) {
+  const statuses = ["pending", REQUESTED_CUSTOM_TIME];
+  const withCustom = await admin
+    .from("applications")
+    .select(APPLICATION_COLUMNS_WITH_CUSTOM)
+    .in("offer_id", offerIds)
+    .in("status", statuses)
+    .order("created_at", { ascending: false });
+
+  if (!withCustom.error) {
+    return (withCustom.data ?? []) as PendingApplicationRow[];
+  }
+
+  const withoutCustom = await admin
+    .from("applications")
+    .select(APPLICATION_COLUMNS)
+    .in("offer_id", offerIds)
+    .in("status", statuses)
+    .order("created_at", { ascending: false });
+
+  if (!withoutCustom.error) {
+    return (withoutCustom.data ?? []) as PendingApplicationRow[];
+  }
+
+  if (!/requested_custom_time|invalid input value for enum|custom_time_notes/i.test(withoutCustom.error.message)) {
+    throw new Error(withoutCustom.error.message);
+  }
+
+  const pendingOnly = await admin
+    .from("applications")
+    .select(APPLICATION_COLUMNS)
+    .in("offer_id", offerIds)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  if (pendingOnly.error) {
+    throw new Error(pendingOnly.error.message);
+  }
+
+  return (pendingOnly.data ?? []) as PendingApplicationRow[];
+}
 
 export async function loadSalonPendingApplications(businessId: string) {
   const admin = createAdminClient();
@@ -64,18 +128,7 @@ export async function loadSalonPendingApplications(businessId: string) {
   const offerTitle = new Map(offerRows.map((offer) => [offer.id as string, offer.title as string]));
   const offerIds = offerRows.map((offer) => offer.id as string);
 
-  const { data: applications, error } = await admin
-    .from("applications")
-    .select(APPLICATION_COLUMNS)
-    .in("offer_id", offerIds)
-    .eq("status", "pending")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const rows = applications ?? [];
+  const rows = await loadPendingRows(admin, offerIds);
   if (rows.length === 0) {
     return [] as SalonApplication[];
   }
@@ -112,9 +165,17 @@ export async function loadSalonPendingApplications(businessId: string) {
       const customerProfile = await loadCustomerProfile(admin, customerId);
       const rating = averages.get(customerId) ?? { average: null, count: 0 };
 
+      const notes = (row.notes as string | null) ?? null;
+      const customTimeNotes =
+        "custom_time_notes" in row
+          ? ((row.custom_time_notes as string | null | undefined) ?? null)
+          : null;
+      const customTime = parseCustomTimeNotes(notes, customTimeNotes);
+
       return {
         id: row.id as string,
-        notes: (row.notes as string | null) ?? null,
+        notes,
+        custom_time_notes: customTime,
         status: row.status as string,
         uploaded_images: await signApplicationImages(
           (row.uploaded_images as string[] | null) ?? [],
@@ -124,6 +185,7 @@ export async function loadSalonPendingApplications(businessId: string) {
         offer_id: row.offer_id as string,
         offer_title: offerTitle.get(row.offer_id as string) ?? "Angebot",
         slot_start: slotId ? (slotMap.get(slotId) ?? null) : null,
+        is_custom_time: isCustomTimeRequest(row.status as string, notes, customTimeNotes),
         customer: {
           id: customerId,
           full_name:
@@ -149,6 +211,8 @@ export type CustomerApplication = {
   id: string;
   status: string;
   notes: string | null;
+  custom_time_notes: string | null;
+  is_custom_time: boolean;
   created_at: string;
   offer_title: string;
   partner_name: string;
@@ -165,15 +229,24 @@ export async function loadCustomerApplications(customerId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("applications")
-    .select("id, status, notes, created_at, offer_id")
+    .select("id, status, notes, created_at, offer_id, custom_time_notes")
     .eq("customer_id", customerId)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const rows = data ?? [];
+  const rows =
+    error && /custom_time_notes/i.test(error.message)
+      ? (
+          await admin
+            .from("applications")
+            .select("id, status, notes, created_at, offer_id")
+            .eq("customer_id", customerId)
+            .order("created_at", { ascending: false })
+        ).data ?? []
+      : error
+        ? (() => {
+            throw new Error(error.message);
+          })()
+        : (data ?? []);
   if (rows.length === 0) {
     return [] as CustomerApplication[];
   }
@@ -246,10 +319,20 @@ export async function loadCustomerApplications(customerId: string) {
     const bookingStatus = bookingMap.get(row.id as string) ?? null;
     const revealed = isSalonIdentityRevealed(row.status as string, bookingStatus);
 
+    const notes = (row.notes as string | null) ?? null;
+    const customTimeNotes =
+      "custom_time_notes" in row
+        ? ((row.custom_time_notes as string | null | undefined) ?? null)
+        : null;
+    const customTime = parseCustomTimeNotes(notes, customTimeNotes);
+    const status = row.status as string;
+
     return {
       id: row.id as string,
-      status: row.status as string,
-      notes: (row.notes as string | null) ?? null,
+      status,
+      notes,
+      custom_time_notes: customTime,
+      is_custom_time: isCustomTimeRequest(status, notes, customTimeNotes),
       created_at: row.created_at as string,
       offer_title: offer?.title ?? "Angebot",
       partner_name: offer?.partner_name ?? partnerSalonLabel(row.offer_id as string),

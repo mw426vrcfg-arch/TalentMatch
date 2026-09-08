@@ -33,6 +33,7 @@ export function notesForDisplay(notes: string | null) {
 
   return notes
     .replace(/\n*\[slot:[0-9a-f-]+\]/gi, "")
+    .replace(/\n*\[custom_time\]/gi, "")
     .trim();
 }
 

@@ -31,7 +31,7 @@ export default async function SalonApplicationsPage({
       logoUrl={resolveLogoUrl(business?.logo_url)}
     >
       <RatingWindow items={pendingRatings} role="business" />
-      <IncomingApplications applications={applications} focusId={focus} />
+      <IncomingApplications applications={applications} focusId={focus} currentUserId={user.id} />
       <MeineTermine items={appointments} role="salon" currentUserId={user.id} />
     </SalonShell>
   );

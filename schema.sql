@@ -131,6 +131,7 @@ create table public.applications (
   customer_id uuid not null references public.users (id) on delete cascade,
   uploaded_images text[] not null default '{}',
   notes text,
+  custom_time_notes text,
   status public.application_status not null default 'pending',
   created_at timestamptz not null default now()
 );

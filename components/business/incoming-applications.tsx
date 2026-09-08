@@ -5,6 +5,7 @@ import { BlockCustomerButton } from "@/components/business/block-customer-button
 import { ReviewButtons } from "@/components/business/review-buttons";
 import { TreatmentPassCard } from "@/components/customer/treatment-pass-card";
 import { LiveRefresh } from "@/components/live-refresh";
+import { AppointmentChat } from "@/components/messages/appointment-chat";
 import { useT } from "@/components/i18n/i18n-provider";
 import { ScrollToId } from "@/components/ui/scroll-to-id";
 import { type SalonApplication } from "@/lib/applications/queries";
@@ -15,9 +16,11 @@ import { AppImage } from "@/components/ui/app-image";
 export function IncomingApplications({
   applications,
   focusId,
+  currentUserId,
 }: {
   applications: SalonApplication[];
   focusId?: string | null;
+  currentUserId: string;
 }) {
   const t = useT();
   const imageLabels = [t("applications.front"), t("applications.back"), t("applications.side")];
@@ -79,10 +82,18 @@ export function IncomingApplications({
                       <p className="mt-1 text-sm text-ink-soft">
                         {t("applications.slotLabel", { slot: formatSlot(application.slot_start) })}
                       </p>
+                    ) : application.is_custom_time && application.custom_time_notes ? (
+                      <p className="mt-1 text-sm text-ink-soft">
+                        {t("applications.customTime")}: {application.custom_time_notes}
+                      </p>
                     ) : null}
                   </div>
                 </div>
-                <span className="ui-badge">{t("status.pending")}</span>
+                <span className="ui-badge">
+                  {application.is_custom_time
+                    ? t("status.requested_custom_time")
+                    : t("status.pending")}
+                </span>
               </div>
 
               <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-3">
@@ -146,8 +157,19 @@ export function IncomingApplications({
                 </p>
               </div>
 
+              {application.is_custom_time ? (
+                <AppointmentChat
+                  applicationId={application.id}
+                  bookingId={null}
+                  currentUserId={currentUserId}
+                  counterpartName={application.customer.full_name}
+                  autoFocus={application.id === focusId}
+                  salonCustomTime={{ notes: application.custom_time_notes }}
+                />
+              ) : null}
+
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-                <ReviewButtons applicationId={application.id} />
+                <ReviewButtons applicationId={application.id} allowAccept={!application.is_custom_time} />
                 <BlockCustomerButton
                   customerId={application.customer.id}
                   customerName={application.customer.full_name}

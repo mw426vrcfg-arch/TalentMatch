@@ -10,8 +10,12 @@ import { intlLocale } from "@/lib/i18n/config";
 import { useLocale } from "@/components/i18n/i18n-provider";
 import { ConfirmedBadge } from "@/components/ui/confirmed-badge";
 import { EmptyExplore } from "@/components/ui/empty-explore";
+import { AppointmentChat } from "@/components/messages/appointment-chat";
 
-function statusKey(status: string): MessageKey {
+function statusKey(status: string, isCustomTime?: boolean): MessageKey {
+  if (isCustomTime || status === "requested_custom_time") {
+    return "status.requested_custom_time";
+  }
   if (status === "accepted" || status === "confirmed") {
     return "status.accepted";
   }
@@ -30,7 +34,7 @@ function statusKey(status: string): MessageKey {
   return "status.pending";
 }
 
-function statusMessageKey(status: string, bookingStatus?: string | null): MessageKey {
+function statusMessageKey(status: string, bookingStatus?: string | null, isCustomTime?: boolean): MessageKey {
   if (bookingStatus === "completed") {
     return "statusMessage.completed";
   }
@@ -43,13 +47,18 @@ function statusMessageKey(status: string, bookingStatus?: string | null): Messag
   if (status === "rejected") {
     return "statusMessage.rejected";
   }
+  if (isCustomTime || status === "requested_custom_time") {
+    return "statusMessage.requested_custom_time";
+  }
   return "statusMessage.pending";
 }
 
 export function MyApplications({
   applications,
+  currentUserId,
 }: {
   applications: CustomerApplication[];
+  currentUserId: string;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -77,9 +86,9 @@ export function MyApplications({
                   ? "confirmed"
                   : application.status;
             const isConfirmed = badgeStatus === "confirmed" || badgeStatus === "accepted";
-            const isPending = badgeStatus === "pending";
+            const isPending = badgeStatus === "pending" || application.is_custom_time;
             return (
-              <article key={application.id} className="ui-card p-5">
+              <article key={application.id} className={`ui-card p-5${application.is_custom_time ? " md:col-span-2" : ""}`}>
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-serif text-2xl text-ink">{application.offer_title}</h3>
                   {isConfirmed ? (
@@ -94,7 +103,7 @@ export function MyApplications({
                             : ""
                       }`}
                     >
-                      {t(statusKey(badgeStatus))}
+                      {t(statusKey(badgeStatus, application.is_custom_time))}
                     </span>
                   )}
                 </div>
@@ -119,10 +128,22 @@ export function MyApplications({
                   <p className="mt-2 text-sm text-ink-soft">
                     {formatSlot(application.slot_start, intlLocale(locale))}
                   </p>
+                ) : application.custom_time_notes ? (
+                  <p className="mt-2 text-sm text-ink-soft">
+                    {t("applications.customTime")}: {application.custom_time_notes}
+                  </p>
                 ) : null}
                 <p className="mt-3 text-sm leading-relaxed text-ink">
-                  {t(statusMessageKey(application.status, application.booking_status))}
+                  {t(statusMessageKey(application.status, application.booking_status, application.is_custom_time))}
                 </p>
+                {application.is_custom_time ? (
+                  <AppointmentChat
+                    applicationId={application.id}
+                    bookingId={null}
+                    currentUserId={currentUserId}
+                    counterpartName={application.identity_revealed ? application.salon_name || application.partner_name : application.partner_name}
+                  />
+                ) : null}
               </article>
             );
           })

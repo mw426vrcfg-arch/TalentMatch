@@ -53,6 +53,7 @@ export default async function OfferDetailPage({
   let favoriteIds: string[] = [];
   let followedIds: string[] = [];
   let perfectMatch = false;
+  let hasHairPhotos = false;
   let gallery: Awaited<ReturnType<typeof loadSalonBeforeAfter>> = [];
   try {
     gallery = offer.salon_user_id ? await loadSalonBeforeAfter(offer.salon_user_id) : [];
@@ -70,6 +71,7 @@ export default async function OfferDetailPage({
       if (loaded.profile?.hair) {
         perfectMatch = isPerfectHairMatch(loaded.profile.hair, offer.hair);
       }
+      hasHairPhotos = (loaded.profile?.hair_portfolio.length ?? 0) > 0;
     } catch (error) {
       console.error("Favorites load failed:", error);
     }
@@ -195,7 +197,13 @@ export default async function OfferDetailPage({
             </p>
           )}
           {offerVisible ? (
-            <SlotChoices offerId={offer.id} slots={offer.slots} canApply={canApply} signedIn={signedIn} />
+            <SlotChoices
+              offerId={offer.id}
+              slots={offer.slots}
+              canApply={canApply}
+              signedIn={signedIn}
+              hasHairPhotos={hasHairPhotos}
+            />
           ) : null}
           {canApply ? (
             <Link
